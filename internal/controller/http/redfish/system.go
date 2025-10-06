@@ -123,7 +123,23 @@ func postSystemResetHandler(d devices.Feature, l logger.Interface) gin.HandlerFu
 			ResetType string `json:"ResetType"`
 		}
 		if err := c.ShouldBindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			// Return Redfish-compliant error for malformed JSON
+			errorResponse := map[string]any{
+				"error": map[string]any{
+					"@Message.ExtendedInfo": []map[string]any{
+						{
+							"MessageId":  "Base.1.0.MalformedJSON",
+							"Message":    "The request body submitted was malformed JSON and could not be parsed by the receiving service.",
+							"Severity":   "Critical",
+							"Resolution": "Ensure that the request body is valid JSON and resubmit the request.",
+						},
+					},
+					"code":    "Base.1.0.MalformedJSON",
+					"message": "Malformed JSON in request body: " + err.Error(),
+				},
+			}
+			c.Header("Content-Type", "application/json")
+			c.JSON(http.StatusBadRequest, errorResponse)
 
 			return
 		}
@@ -140,19 +156,54 @@ func postSystemResetHandler(d devices.Feature, l logger.Interface) gin.HandlerFu
 		case resetTypePowerCycle:
 			action = actionPowerCycle
 		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported ResetType"})
+			// Return Redfish-compliant error for unsupported ResetType
+			errorResponse := map[string]any{
+				"error": map[string]any{
+					"@Message.ExtendedInfo": []map[string]any{
+						{
+							"MessageId":  "Base.1.0.ActionParameterNotSupported",
+							"Message":    "The action parameter " + body.ResetType + " is not supported on the target resource.",
+							"Severity":   "Warning",
+							"Resolution": "Remove the parameter from the request body and resubmit the request.",
+						},
+					},
+					"code":    "Base.1.0.ActionParameterNotSupported",
+					"message": "The parameter ResetType with value '" + body.ResetType + "' is not supported.",
+				},
+			}
+			c.Header("Content-Type", "application/json")
+			c.JSON(http.StatusBadRequest, errorResponse)
 
 			return
 		}
 
-		res, err := d.SendPowerAction(c.Request.Context(), id, action)
+		_, err := d.SendPowerAction(c.Request.Context(), id, action)
 		if err != nil {
 			l.Error(err, "http - redfish - ComputerSystem.Reset")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			// Return Redfish-compliant error response
+			errorResponse := map[string]any{
+				"error": map[string]any{
+					"@Message.ExtendedInfo": []map[string]any{
+						{
+							"MessageId":  "Base.1.0.GeneralError",
+							"Message":    "A general error has occurred. See ExtendedInfo for more information.",
+							"Severity":   "Critical",
+							"Resolution": "None.",
+						},
+					},
+					"code":    "Base.1.0.GeneralError",
+					"message": "Action failed: " + err.Error(),
+				},
+			}
+			c.Header("Content-Type", "application/json")
+			c.JSON(http.StatusInternalServerError, errorResponse)
 
 			return
 		}
 
-		c.JSON(http.StatusOK, res)
+		// For successful reset actions, return HTTP 204 No Content
+		// This indicates the action was completed successfully with no response body
+		c.Header("Content-Type", "application/json")
+		c.Status(http.StatusNoContent)
 	}
 }
