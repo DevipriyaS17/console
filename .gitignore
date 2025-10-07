@@ -23,6 +23,12 @@ __debug_bin*
 # Test binary, built with `go test -c`
 *.test
 
+# Ignore build and console files
+build
+console
+app
+@
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 

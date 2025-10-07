@@ -16,7 +16,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/device-management-toolkit/console/config"
-	"github.com/device-management-toolkit/console/internal/controller/http/redfish"
+	redfishv1 "github.com/device-management-toolkit/console/internal/controller/http/redfish/v1"
 	v1 "github.com/device-management-toolkit/console/internal/controller/http/v1"
 	v2 "github.com/device-management-toolkit/console/internal/controller/http/v2"
 	"github.com/device-management-toolkit/console/internal/usecase"
@@ -102,10 +102,10 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 
 	bluefish := protected.Group("/redfish/v1")
 	{
-		// Redfish Service Root and minimal services
-		redfish.NewRoutes(bluefish, l)
-		redfish.NewSystemsRoutes(bluefish, t.Devices, l)
-	} 
+		// Redfish v1 Service Root and minimal services
+		redfishv1.NewServiceRootRoutes(bluefish, l)
+		redfishv1.NewSystemsRoutes(bluefish, t.Devices, l)
+	}
 
 	h := protected.Group("/v1/admin")
 	{

@@ -1,7 +1,12 @@
-package redfish
+// Package v1 implements Redfish API v1 ComputerSystem resources and actions.
+package v1
 
 import (
+	"fmt"
+	"math/rand"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -31,7 +36,7 @@ const (
 	cimPowerHardOff = 8
 )
 
-// NewSystemsRoutes registers minimal Redfish ComputerSystem routes.
+// NewSystemsRoutes registers Redfish v1 ComputerSystem routes.
 // It exposes:
 // - GET /redfish/v1/Systems
 // - GET /redfish/v1/Systems/:id
@@ -42,14 +47,14 @@ func NewSystemsRoutes(r *gin.RouterGroup, d devices.Feature, l logger.Interface)
 	systems.GET("", getSystemsCollectionHandler(d, l))
 	systems.GET(":id", getSystemInstanceHandler(d, l))
 	systems.POST(":id/Actions/ComputerSystem.Reset", postSystemResetHandler(d, l))
-	l.Info("Registered Redfish Systems routes under %s", r.BasePath()+"/Systems")
+	l.Info("Registered Redfish v1 Systems routes under %s", r.BasePath()+"/Systems")
 }
 
 func getSystemsCollectionHandler(d devices.Feature, l logger.Interface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		items, err := d.Get(c.Request.Context(), maxSystemsList, 0, "")
 		if err != nil {
-			l.Error(err, "http - redfish - Systems collection")
+			l.Error(err, "http - redfish v1 - Systems collection")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 
 			return
@@ -84,7 +89,7 @@ func getSystemInstanceHandler(d devices.Feature, l logger.Interface) gin.Handler
 		powerState := powerStateUnknown
 
 		if ps, err := d.GetPowerState(c.Request.Context(), id); err != nil {
-			l.Warn("redfish - Systems instance: failed to get power state for %s: %v", id, err)
+			l.Warn("redfish v1 - Systems instance: failed to get power state for %s: %v", id, err)
 		} else {
 			switch ps.PowerState { // CIM PowerState values
 			case actionPowerUp: // 2 (On)
@@ -123,8 +128,13 @@ func postSystemResetHandler(d devices.Feature, l logger.Interface) gin.HandlerFu
 			ResetType string `json:"ResetType"`
 		}
 		if err := c.ShouldBindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			MalformedJSONError(c)
+			return
+		}
 
+		// Check if ResetType is provided (required property)
+		if body.ResetType == "" {
+			PropertyMissingError(c, "ResetType")
 			return
 		}
 
@@ -140,19 +150,92 @@ func postSystemResetHandler(d devices.Feature, l logger.Interface) gin.HandlerFu
 		case resetTypePowerCycle:
 			action = actionPowerCycle
 		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported ResetType"})
-
+			PropertyValueNotInListError(c, body.ResetType, "ResetType")
 			return
 		}
+
+		// Check current power state to avoid redundant operations
+		currentPowerState, err := d.GetPowerState(c.Request.Context(), id)
+		if err == nil {
+			// Only check for conflict if we can get the current state
+			// Map CIM power states to determine if action would result in no change
+			isCurrentlyOn := (currentPowerState.PowerState == cimPowerOn)
+			isCurrentlyOff := (currentPowerState.PowerState == cimPowerSoftOff || currentPowerState.PowerState == cimPowerHardOff)
+
+			var shouldReturnConflict bool
+
+			switch action {
+			case actionPowerUp: // Power On
+				if isCurrentlyOn {
+					shouldReturnConflict = true
+				}
+			case actionPowerDown: // Power Off
+				if isCurrentlyOff {
+					shouldReturnConflict = true
+				}
+			}
+
+			if shouldReturnConflict {
+				OperationNotAllowedError(c)
+				return
+			}
+		}
+		// If we can't get the power state, continue with the action anyway
 
 		res, err := d.SendPowerAction(c.Request.Context(), id, action)
 		if err != nil {
-			l.Error(err, "http - redfish - ComputerSystem.Reset")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			l.Error(err, "http - redfish v1 - ComputerSystem.Reset")
 
+			// Check if this is a "not found" error
+			if strings.Contains(strings.ToLower(err.Error()), "not found") ||
+				strings.Contains(err.Error(), "DevicesUseCase") {
+				ResourceNotFoundError(c, "ComputerSystem", id)
+			} else {
+				GeneralError(c)
+			}
 			return
 		}
 
-		c.JSON(http.StatusOK, res)
+		// Generate a task ID for this reset operation
+		taskID := fmt.Sprintf("%d", rand.Intn(999999)+100000)
+
+		// Determine task state based on the result
+		taskState := "Completed"
+		taskStatus := "OK"
+		messageID := BaseSuccessMessageID
+		message := "The request completed successfully."
+
+		// Check if the operation was successful based on ReturnValue
+		if int(res.ReturnValue) != 0 {
+			taskState = "Exception"
+			taskStatus = "Critical"
+			messageID = BaseErrorMessageID
+			message = "A general error has occurred."
+		}
+
+		// Return Redfish-compliant Task response
+		taskResponse := map[string]any{
+			"@odata.context": "/redfish/v1/$metadata#Task.Task",
+			"@odata.id":      "/redfish/v1/TaskService/Tasks/" + taskID,
+			"@odata.type":    "#Task.v1_6_0.Task",
+			"Id":             taskID,
+			"Name":           "System Reset Task",
+			"TaskState":      taskState,
+			"TaskStatus":     taskStatus,
+			"StartTime":      time.Now().UTC().Format(time.RFC3339),
+			"EndTime":        time.Now().UTC().Format(time.RFC3339),
+			"Messages": []map[string]any{
+				{
+					"MessageId": messageID,
+					"Message":   message,
+					"Severity":  taskStatus,
+				},
+			},
+		}
+
+		// Set Redfish-compliant headers
+		SetRedfishHeaders(c)
+
+		c.JSON(http.StatusOK, taskResponse)
 	}
 }

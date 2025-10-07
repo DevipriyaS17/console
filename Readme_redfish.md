@@ -401,7 +401,7 @@ curl -X GET http://localhost:8181/api/redfish/v1/Systems -H "Authorization: Bear
 ### Get System Details by ID Command Request
 
 ```bash
-curl -X GET http://localhost:8181/api/redfish/v1/Systems/0313b93f-2a7c-41e8-b603-29c1602dcef9   -H "Authorization: Bearer $AUTH_TOKEN"
+curl -i -X GET http://localhost:8181/api/redfish/v1/Systems/0313b93f-2a7c-41e8-b603-29c1602dcef9   -H "Authorization: Bearer $AUTH_TOKEN"
 ```
 
 ### Get System Details by ID SUCCESS Command Response
@@ -433,38 +433,135 @@ curl -X GET http://localhost:8181/api/redfish/v1/Systems/0313b93f-2a7c-41e8-b603
 
 #### Power OFF System
 
-##### POwer OFF System Command Request
+##### Power OFF System Command Request
 
 ```bash
-curl -X POST http://localhost:8181/api/redfish/v1/Systems/0313b93f-2a7c-41e8-b603-29c1602dcef9/Actions/ComputerSystem.Reset   -H "Authorization: Bearer $AUTH_TOKEN"   -H "Content-Type: application/json"   -d '{"ResetType":"ForceOff"}'
+curl -i -X POST http://localhost:8181/api/redfish/v1/Systems/0313b93f-2a7c-41e8-b603-29c1602dcef9/Actions/ComputerSystem.Reset   -H "Authorization: Bearer $AUTH_TOKEN"   -H "Content-Type: application/json"   -d '{"ResetType":"ForceOff"}'
 ```
 
 ##### Power OFF System SUCCESS Command Response
 
 ```json
-{"ReturnValue":0}
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Content-Security-Policy: default-src 'self'
+Content-Type: application/json; charset=utf-8
+OData-Version: 4.0
+X-Frame-Options: DENY
+Date: Mon, 06 Oct 2025 22:50:52 GMT
+Content-Length: 398
+
+{
+    "@odata.context":"/redfish/v1/$metadata#Task.Task",
+    "@odata.id":"/redfish/v1/TaskService/Tasks/312431",
+    "@odata.type":"#Task.v1_6_0.Task",
+    "EndTime":"2025-10-06T22:50:52Z",
+    "Id":"312431",
+    "Messages":[
+        {
+            "Message":"The request completed successfully.",
+            "MessageId":"Base.1.0.Success",
+            "Severity":"OK"
+        }
+    ],
+    "Name":"System Reset Task",
+    "StartTime":"2025-10-06T22:50:52Z",
+    "TaskState":"Completed",
+    "TaskStatus":"OK"
+}
 ```
 
 ##### Power OFF System ERROR Command Response (Device ID Does Not Exist)
 
 ```json
-{"error":"DevicesUseCase -  - : "}
+HTTP/1.1 404 Not Found
+Cache-Control: no-cache
+Content-Type: application/json; charset=utf-8
+Odata-Version: 4.0
+Date: Mon, 06 Oct 2025 23:57:35 GMT
+Content-Length: 447
+
+{
+    "error":
+    {
+        "@Message.ExtendedInfo":
+        [
+            {
+                "Message":"The requested resource of type ComputerSystem named '0313b93f-2a7c-41e8-b603-29c1602dcef' was not found.",
+                "MessageId":"Base.1.0.ResourceNotFound",
+                "Resolution":"Provide a valid resource identifier and resubmit the request.",
+                "Severity":"Critical"
+            }
+        ],
+        "code":"Base.1.0.ResourceNotFound",
+        "message":"The requested resource of type ComputerSystem named '0313b93f-2a7c-41e8-b603-29c1602dcef' was not found."
+    }
+}
 ```
+
 
 ##### Power ON System Command Request
 
 ```bash
-curl -X POST http://localhost:8181/api/redfish/v1/Systems/0313b93f-2a7c-41e8-b603-29c1602dcef9/Actions/ComputerSystem.Reset   -H "Authorization: Bearer $AUTH_TOKEN"   -H "Content-Type: application/json"   -d '{"ResetType":"On"}'
+curl -i -X POST http://localhost:8181/api/redfish/v1/Systems/0313b93f-2a7c-41e8-b603-29c1602dcef9/Actions/ComputerSystem.Reset -H "Authorization: Bearer $AUTH_TOKEN" -H "Content-Type: application/json" -d '{"ResetType":"On"}'
 ```
 
 ##### Power ON System SUCCESS Command Response
 
 ```json
-{"ReturnValue":0}
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Content-Security-Policy: default-src 'self'
+Content-Type: application/json; charset=utf-8
+OData-Version: 4.0
+X-Frame-Options: DENY
+Date: Mon, 06 Oct 2025 22:50:52 GMT
+Content-Length: 398
+
+{
+    "@odata.context":"/redfish/v1/$metadata#Task.Task",
+    "@odata.id":"/redfish/v1/TaskService/Tasks/312431",
+    "@odata.type":"#Task.v1_6_0.Task",
+    "EndTime":"2025-10-06T22:50:52Z",
+    "Id":"312431",
+    "Messages":[
+        {
+            "Message":"The request completed successfully.",
+            "MessageId":"Base.1.0.Success",
+            "Severity":"OK"
+        }
+    ],
+    "Name":"System Reset Task",
+    "StartTime":"2025-10-06T22:50:52Z",
+    "TaskState":"Completed",
+    "TaskStatus":"OK"
+}
 ```
 
 ##### Power ON System ERROR Command Response (Device ID Does Not Exist)
 
 ```json
-{"error":"DevicesUseCase -  - : "}
+HTTP/1.1 404 Not Found
+Cache-Control: no-cache
+Content-Type: application/json; charset=utf-8
+Odata-Version: 4.0
+Date: Mon, 06 Oct 2025 23:57:35 GMT
+Content-Length: 447
+
+{
+    "error":
+    {
+        "@Message.ExtendedInfo":
+        [
+            {
+                "Message":"The requested resource of type ComputerSystem named '0313b93f-2a7c-41e8-b603-29c1602dcef' was not found.",
+                "MessageId":"Base.1.0.ResourceNotFound",
+                "Resolution":"Provide a valid resource identifier and resubmit the request.",
+                "Severity":"Critical"
+            }
+        ],
+        "code":"Base.1.0.ResourceNotFound",
+        "message":"The requested resource of type ComputerSystem named '0313b93f-2a7c-41e8-b603-29c1602dcef' was not found."
+    }
+}
 ```

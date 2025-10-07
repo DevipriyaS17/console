@@ -1,4 +1,9 @@
-package redfish
+/*********************************************************************
+ * Copyright (c) Intel Corporation 2021
+ * SPDX-License-Identifier: Apache-2.0
+ **********************************************************************/
+
+package v1
 
 import (
 	"net/http"
@@ -8,43 +13,29 @@ import (
 	"github.com/device-management-toolkit/console/pkg/logger"
 )
 
-// NewRoutes registers the Redfish Service Root handler.
-// It responds to GET on the group base path (e.g., /redfish/v1).
-func NewRoutes(r *gin.RouterGroup, l logger.Interface) {
-	// Service Root per DMTF Redfish spec. Keep minimal and compliant.
-	handler := func(c *gin.Context) {
-		// Minimal ServiceRoot payload. Additional links can be added later.
+// NewServiceRootRoutes registers Redfish API v1 service root routes
+func NewServiceRootRoutes(r *gin.RouterGroup, l logger.Interface) {
+	// Redfish Service Root (main entry point)
+	r.GET("/", func(c *gin.Context) {
 		payload := map[string]any{
 			"@odata.type":    "#ServiceRoot.v1_0_0.ServiceRoot",
 			"@odata.id":      "/redfish/v1/",
 			"Id":             "RootService",
-			"Name":           "Redfish Service Root",
-			"RedfishVersion": "1.0.0",
-			"SessionService": map[string]any{
-				"@odata.id": "/redfish/v1/SessionService",
-			},
-			"Systems": map[string]any{
-				"@odata.id": "/redfish/v1/Systems",
-			},
-			"Links": map[string]any{
-				"Sessions": map[string]any{
-					"@odata.id": "/redfish/v1/SessionService/Sessions",
-				},
-			},
+			"Name":           "Redfish Root Service",
+			"RedfishVersion": "1.11.0",
+			"UUID":           "00000000-0000-0000-0000-000000000000",
+			"Systems":        map[string]any{"@odata.id": "/redfish/v1/Systems"},
+			"SessionService": map[string]any{"@odata.id": "/redfish/v1/SessionService"},
 		}
 
 		c.JSON(http.StatusOK, payload)
-	}
+	})
 
-	// Register for both the group root and explicit trailing slash.
-	r.GET("", handler)
-	r.GET("/", handler)
-
-	// $metadata endpoint (minimal OData metadata document)
+	// OData Service Document
 	r.GET("/$metadata", func(c *gin.Context) {
-		c.Header("Content-Type", "application/xml; charset=utf-8")
+		c.Header("Content-Type", "application/xml")
 		c.String(http.StatusOK, `<?xml version="1.0" encoding="UTF-8"?>
-<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
 	<edmx:DataServices>
 		<Schema Namespace="Redfish" xmlns="http://docs.oasis-open.org/odata/ns/edm">
 			<EntityType Name="ServiceRoot">
@@ -114,5 +105,5 @@ func NewRoutes(r *gin.RouterGroup, l logger.Interface) {
 		c.JSON(http.StatusOK, payload)
 	})
 
-	l.Info("Registered Redfish Service Root at %s", r.BasePath())
+	l.Info("Registered Redfish v1 Service Root at %s", r.BasePath())
 }
