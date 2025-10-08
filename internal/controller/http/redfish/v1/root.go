@@ -10,11 +10,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/device-management-toolkit/console/config"
 	"github.com/device-management-toolkit/console/pkg/logger"
 )
 
 // NewServiceRootRoutes registers Redfish API v1 service root routes
-func NewServiceRootRoutes(r *gin.RouterGroup, l logger.Interface) {
+func NewServiceRootRoutes(r *gin.RouterGroup, cfg *config.Config, l logger.Interface) {
+	// Apply Redfish-compliant authentication if auth is enabled
+	if !cfg.Disabled {
+		r.Use(RedfishJWTAuthMiddleware(cfg))
+	}
+
 	// Redfish Service Root (main entry point)
 	r.GET("/", func(c *gin.Context) {
 		payload := map[string]any{

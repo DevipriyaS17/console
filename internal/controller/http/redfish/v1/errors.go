@@ -4,8 +4,12 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+
+	"github.com/device-management-toolkit/console/config"
 )
 
 // Redfish Base Message Registry v1.11.0 Message IDs
@@ -17,6 +21,9 @@ const (
 	BasePropertyValueNotInListID = "Base.1.11.0.PropertyValueNotInList"
 	BaseResourceNotFoundID       = "Base.1.11.0.ResourceNotFound"
 	BaseOperationNotAllowedID    = "Base.1.11.0.OperationNotAllowed"
+	BaseActionNotSupportedID     = "Base.1.11.0.ActionNotSupported"
+	BaseNoValidSessionID         = "Base.1.11.0.NoValidSession"
+	BaseInsufficientPrivilegeID  = "Base.1.11.0.InsufficientPrivilege"
 )
 
 // redfishError creates a standard Redfish error response structure
@@ -105,6 +112,76 @@ func OperationNotAllowedError(c *gin.Context) {
 		"Critical",
 		"The operation was not successful because the resource is in a state that does not allow this operation.",
 		nil)
+}
+
+// MethodNotAllowedError returns a Redfish-compliant error for HTTP method not allowed (405)
+func MethodNotAllowedError(c *gin.Context, action string, allowedMethods string) {
+	// Set the required Allow header for 405 responses
+	c.Header("Allow", allowedMethods)
+
+	redfishErrorResponse(c, http.StatusMethodNotAllowed,
+		BaseActionNotSupportedID,
+		fmt.Sprintf("The action %s is not supported by the resource.", action),
+		"Critical",
+		"The action supplied cannot be resubmitted to the implementation. Perhaps the action was invalid, the wrong resource was the target or the implementation documentation may be of assistance.",
+		[]string{action})
+}
+
+// NoValidSessionError returns a Redfish-compliant error for missing or invalid authentication (401)
+func NoValidSessionError(c *gin.Context) {
+	redfishErrorResponse(c, http.StatusUnauthorized,
+		BaseNoValidSessionID,
+		"There is no valid session established with the implementation.",
+		"Critical",
+		"Establish a valid session before attempting any operations.",
+		nil)
+}
+
+// InsufficientPrivilegeError returns a Redfish-compliant error for insufficient permissions (403)
+func InsufficientPrivilegeError(c *gin.Context) {
+	redfishErrorResponse(c, http.StatusForbidden,
+		BaseInsufficientPrivilegeID,
+		"There are insufficient privileges for the account or credentials associated with the current session to perform the requested operation.",
+		"Critical",
+		"Either abandon the operation or change the associated access rights and resubmit the request if the operation failed for authorization reasons.",
+		nil)
+}
+
+// RedfishJWTAuthMiddleware provides Redfish-compliant authentication error responses
+func RedfishJWTAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := c.GetHeader("Authorization")
+		tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
+
+		if tokenString == "" {
+			NoValidSessionError(c)
+			c.Abort()
+			return
+		}
+
+		// if clientID is set, use the oidc verifier (this would need the verifier passed in)
+		if cfg.ClientID != "" {
+			// For OAuth/OIDC, we'd need to pass the verifier or handle differently
+			// For now, return a general authentication error
+			NoValidSessionError(c)
+			c.Abort()
+			return
+		}
+
+		claims := &jwt.MapClaims{}
+
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(_ *jwt.Token) (interface{}, error) {
+			return []byte(cfg.JWTKey), nil
+		})
+
+		if err != nil || !token.Valid {
+			NoValidSessionError(c)
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
 }
 
 // GeneralError returns a Redfish-compliant error for general internal errors

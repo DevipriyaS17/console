@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/device-management-toolkit/console/config"
 	"github.com/device-management-toolkit/console/internal/usecase/devices"
 	"github.com/device-management-toolkit/console/pkg/logger"
 )
@@ -38,15 +39,29 @@ const (
 
 // NewSystemsRoutes registers Redfish v1 ComputerSystem routes.
 // It exposes:
-// - GET /redfish/v1/Systems
-// - GET /redfish/v1/Systems/:id
-// - POST /redfish/v1/Systems/:id/Actions/ComputerSystem.Reset
+// - GET /redfish/v1/Systems (collection)
+// - GET /redfish/v1/Systems/:id (individual system)
+// - POST /redfish/v1/Systems/:id/Actions/ComputerSystem.Reset (reset action)
+// - GET/PUT/PATCH/DELETE /redfish/v1/Systems/:id/Actions/ComputerSystem.Reset (405 Method Not Allowed)
 // The :id is expected to be the device GUID and will be mapped directly to SendPowerAction.
-func NewSystemsRoutes(r *gin.RouterGroup, d devices.Feature, l logger.Interface) {
+func NewSystemsRoutes(r *gin.RouterGroup, d devices.Feature, cfg *config.Config, l logger.Interface) {
 	systems := r.Group("/Systems")
+
+	// Apply Redfish-compliant authentication if auth is enabled
+	if !cfg.Disabled {
+		systems.Use(RedfishJWTAuthMiddleware(cfg))
+	}
+
 	systems.GET("", getSystemsCollectionHandler(d, l))
 	systems.GET(":id", getSystemInstanceHandler(d, l))
+
+	// ComputerSystem.Reset Action - only POST is allowed
 	systems.POST(":id/Actions/ComputerSystem.Reset", postSystemResetHandler(d, l))
+	systems.GET(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
+	systems.PUT(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
+	systems.PATCH(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
+	systems.DELETE(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
+
 	l.Info("Registered Redfish v1 Systems routes under %s", r.BasePath()+"/Systems")
 }
 
@@ -117,6 +132,13 @@ func getSystemInstanceHandler(d devices.Feature, l logger.Interface) gin.Handler
 			},
 		}
 		c.JSON(http.StatusOK, payload)
+	}
+}
+
+// methodNotAllowedHandler returns a handler that responds with 405 Method Not Allowed for Redfish actions
+func methodNotAllowedHandler(action string, allowedMethods string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		MethodNotAllowedError(c, action, allowedMethods)
 	}
 }
 

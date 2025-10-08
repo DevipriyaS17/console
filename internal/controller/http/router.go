@@ -100,11 +100,12 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 		v1.NewAmtRoutes(h2, t.Devices, t.AMTExplorer, t.Exporter, l)
 	}
 
-	bluefish := protected.Group("/redfish/v1")
+	// Redfish v1 routes with custom authentication handling
+	bluefish := handler.Group("/api/redfish/v1")
 	{
 		// Redfish v1 Service Root and minimal services
-		redfishv1.NewServiceRootRoutes(bluefish, l)
-		redfishv1.NewSystemsRoutes(bluefish, t.Devices, l)
+		redfishv1.NewServiceRootRoutes(bluefish, cfg, l)
+		redfishv1.NewSystemsRoutes(bluefish, t.Devices, cfg, l)
 	}
 
 	h := protected.Group("/v1/admin")
