@@ -115,7 +115,7 @@ func TestRedfishJWTAuthMiddleware(t *testing.T) {
 			// Create request
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/test", nil)
-			
+
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)
 			}
@@ -125,7 +125,7 @@ func TestRedfishJWTAuthMiddleware(t *testing.T) {
 
 			// Assertions
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			
+
 			if tt.checkResponse != nil {
 				tt.checkResponse(t, w.Body.String(), w.Header())
 			}
@@ -216,6 +216,18 @@ func TestRedfishErrorResponses(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			expectedMsg:    "Base.1.11.0.GeneralError",
 		},
+		{
+			name:           "ServiceUnavailableError",
+			errorFunc:      ServiceUnavailableError,
+			expectedStatus: http.StatusBadGateway,
+			expectedMsg:    "Base.1.11.0.GeneralError",
+		},
+		{
+			name:           "ServiceTemporarilyUnavailableError",
+			errorFunc:      ServiceTemporarilyUnavailableError,
+			expectedStatus: http.StatusServiceUnavailable,
+			expectedMsg:    "Base.1.11.0.GeneralError",
+		},
 	}
 
 	for _, tt := range tests {
@@ -231,20 +243,25 @@ func TestRedfishErrorResponses(t *testing.T) {
 
 			// Assertions
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			
+
 			body := w.Body.String()
 			assert.Contains(t, body, tt.expectedMsg)
 			assert.Contains(t, body, `"@Message.ExtendedInfo"`)
 			assert.Contains(t, body, `"error"`)
-			
+
 			// Check headers
 			headers := w.Header()
 			assert.Equal(t, "application/json; charset=utf-8", headers.Get("Content-Type"))
 			assert.Equal(t, "4.0", headers.Get("OData-Version"))
-			
+
 			// For MethodNotAllowedError, check Allow header
 			if tt.name == "MethodNotAllowedError" {
 				assert.Equal(t, "POST", headers.Get("Allow"))
+			}
+
+			// For ServiceTemporarilyUnavailableError, check Retry-After header
+			if tt.name == "ServiceTemporarilyUnavailableError" {
+				assert.Equal(t, "30", headers.Get("Retry-After"))
 			}
 		})
 	}
@@ -260,7 +277,7 @@ func createValidJWT(secretKey string) string {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, _ := token.SignedString([]byte(secretKey))
-	
+
 	return "Bearer " + tokenString
 }
 
@@ -272,6 +289,6 @@ func createExpiredJWT(secretKey string) string {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, _ := token.SignedString([]byte(secretKey))
-	
+
 	return "Bearer " + tokenString
 }

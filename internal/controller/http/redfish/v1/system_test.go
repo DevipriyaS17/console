@@ -64,7 +64,27 @@ func TestGetSystemsCollectionHandler(t *testing.T) {
 			mockError:      errors.New("database connection failed"),
 			expectedStatus: http.StatusInternalServerError,
 			checkResponse: func(t *testing.T, body string) {
-				assert.Contains(t, body, "database connection failed")
+				assert.Contains(t, body, `"Base.1.11.0.GeneralError"`)
+			},
+		},
+		{
+			name:           "upstream communication error",
+			mockDevices:    nil,
+			mockError:      errors.New("WSMAN connection timeout"),
+			expectedStatus: http.StatusBadGateway,
+			checkResponse: func(t *testing.T, body string) {
+				assert.Contains(t, body, `"Base.1.11.0.GeneralError"`)
+				assert.Contains(t, body, "upstream service or managed device is unavailable")
+			},
+		},
+		{
+			name:           "service temporarily unavailable error",
+			mockDevices:    nil,
+			mockError:      errors.New("too many connections to database"),
+			expectedStatus: http.StatusServiceUnavailable,
+			checkResponse: func(t *testing.T, body string) {
+				assert.Contains(t, body, `"Base.1.11.0.GeneralError"`)
+				assert.Contains(t, body, "service is temporarily unavailable")
 			},
 		},
 	}
@@ -102,7 +122,7 @@ func TestGetSystemsCollectionHandler(t *testing.T) {
 
 			// Assertions
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			
+
 			if tt.checkResponse != nil {
 				tt.checkResponse(t, w.Body.String())
 			}
@@ -241,7 +261,7 @@ func TestGetSystemInstanceHandler(t *testing.T) {
 
 			// Assertions
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			
+
 			if tt.checkResponse != nil {
 				tt.checkResponse(t, w.Body.String())
 			}
@@ -265,7 +285,7 @@ func TestMethodNotAllowedHandler(t *testing.T) {
 			checkResponse: func(t *testing.T, body string, headers http.Header) {
 				// Check Allow header
 				assert.Equal(t, "POST", headers.Get("Allow"))
-				
+
 				// Check Redfish error response
 				assert.Contains(t, body, `"Base.1.11.0.ActionNotSupported"`)
 				assert.Contains(t, body, "ComputerSystem.Reset")
@@ -289,7 +309,7 @@ func TestMethodNotAllowedHandler(t *testing.T) {
 
 			// Assertions
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			
+
 			if tt.checkResponse != nil {
 				tt.checkResponse(t, w.Body.String(), w.Header())
 			}
@@ -299,18 +319,18 @@ func TestMethodNotAllowedHandler(t *testing.T) {
 
 func TestPostSystemResetHandler(t *testing.T) {
 	tests := []struct {
-		name             string
-		deviceID         string
-		requestBody      map[string]interface{}
-		mockPowerState   *dto.PowerState
-		mockPowerError   error
-		mockResetResp    power.PowerActionResponse
-		mockResetError   error
-		expectedStatus   int
-		checkResponse    func(t *testing.T, body string)
-		checkPowerCall   bool
-		checkResetCall   bool
-		expectedAction   int
+		name           string
+		deviceID       string
+		requestBody    map[string]interface{}
+		mockPowerState *dto.PowerState
+		mockPowerError error
+		mockResetResp  power.PowerActionResponse
+		mockResetError error
+		expectedStatus int
+		checkResponse  func(t *testing.T, body string)
+		checkPowerCall bool
+		checkResetCall bool
+		expectedAction int
 	}{
 		{
 			name:     "successful power on",
@@ -325,11 +345,11 @@ func TestPostSystemResetHandler(t *testing.T) {
 			mockResetResp: power.PowerActionResponse{
 				ReturnValue: 0, // success
 			},
-			mockResetError:   nil,
-			expectedStatus:   http.StatusOK,
-			checkPowerCall:   true,
-			checkResetCall:   true,
-			expectedAction:   actionPowerUp,
+			mockResetError: nil,
+			expectedStatus: http.StatusOK,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionPowerUp,
 			checkResponse: func(t *testing.T, body string) {
 				assert.Contains(t, body, `"TaskState":"Completed"`)
 				assert.Contains(t, body, `"TaskStatus":"OK"`)
@@ -350,11 +370,11 @@ func TestPostSystemResetHandler(t *testing.T) {
 			mockResetResp: power.PowerActionResponse{
 				ReturnValue: 0,
 			},
-			mockResetError:   nil,
-			expectedStatus:   http.StatusOK,
-			checkPowerCall:   true,
-			checkResetCall:   true,
-			expectedAction:   actionPowerDown,
+			mockResetError: nil,
+			expectedStatus: http.StatusOK,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionPowerDown,
 			checkResponse: func(t *testing.T, body string) {
 				assert.Contains(t, body, `"TaskState":"Completed"`)
 				assert.Contains(t, body, `"TaskStatus":"OK"`)
@@ -369,13 +389,13 @@ func TestPostSystemResetHandler(t *testing.T) {
 			mockPowerState: &dto.PowerState{
 				PowerState: cimPowerOn,
 			},
-			mockPowerError:   nil,
-			mockResetResp:    power.PowerActionResponse{ReturnValue: 0},
-			mockResetError:   nil,
-			expectedStatus:   http.StatusOK,
-			checkPowerCall:   true,
-			checkResetCall:   true,
-			expectedAction:   actionReset,
+			mockPowerError: nil,
+			mockResetResp:  power.PowerActionResponse{ReturnValue: 0},
+			mockResetError: nil,
+			expectedStatus: http.StatusOK,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionReset,
 			checkResponse: func(t *testing.T, body string) {
 				assert.Contains(t, body, `"TaskState":"Completed"`)
 			},
@@ -389,13 +409,13 @@ func TestPostSystemResetHandler(t *testing.T) {
 			mockPowerState: &dto.PowerState{
 				PowerState: cimPowerOn,
 			},
-			mockPowerError:   nil,
-			mockResetResp:    power.PowerActionResponse{ReturnValue: 0},
-			mockResetError:   nil,
-			expectedStatus:   http.StatusOK,
-			checkPowerCall:   true,
-			checkResetCall:   true,
-			expectedAction:   actionPowerCycle,
+			mockPowerError: nil,
+			mockResetResp:  power.PowerActionResponse{ReturnValue: 0},
+			mockResetError: nil,
+			expectedStatus: http.StatusOK,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionPowerCycle,
 			checkResponse: func(t *testing.T, body string) {
 				assert.Contains(t, body, `"TaskState":"Completed"`)
 			},
@@ -507,11 +527,11 @@ func TestPostSystemResetHandler(t *testing.T) {
 			mockResetResp: power.PowerActionResponse{
 				ReturnValue: 1, // failure
 			},
-			mockResetError:   nil,
-			expectedStatus:   http.StatusOK,
-			checkPowerCall:   true,
-			checkResetCall:   true,
-			expectedAction:   actionPowerUp,
+			mockResetError: nil,
+			expectedStatus: http.StatusOK,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionPowerUp,
 			checkResponse: func(t *testing.T, body string) {
 				assert.Contains(t, body, `"TaskState":"Exception"`)
 				assert.Contains(t, body, `"TaskStatus":"Critical"`)
@@ -554,6 +574,132 @@ func TestPostSystemResetHandler(t *testing.T) {
 			expectedAction: actionPowerUp,
 			checkResponse: func(t *testing.T, body string) {
 				assert.Contains(t, body, `"TaskState":"Completed"`)
+			},
+		},
+		{
+			name:     "upstream communication error - connection timeout",
+			deviceID: "test-device-13",
+			requestBody: map[string]interface{}{
+				"ResetType": resetTypeOn,
+			},
+			mockPowerState: &dto.PowerState{
+				PowerState: cimPowerHardOff,
+			},
+			mockPowerError: nil,
+			mockResetResp:  power.PowerActionResponse{},
+			mockResetError: errors.New("connection timeout to AMT device"),
+			expectedStatus: http.StatusBadGateway,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionPowerUp,
+			checkResponse: func(t *testing.T, body string) {
+				assert.Contains(t, body, `"Base.1.11.0.GeneralError"`)
+				assert.Contains(t, body, "upstream service or managed device is unavailable")
+			},
+		},
+		{
+			name:     "upstream communication error - WSMAN failure",
+			deviceID: "test-device-14",
+			requestBody: map[string]interface{}{
+				"ResetType": resetTypeForceOff,
+			},
+			mockPowerState: &dto.PowerState{
+				PowerState: cimPowerOn,
+			},
+			mockPowerError: nil,
+			mockResetResp:  power.PowerActionResponse{},
+			mockResetError: errors.New("WSMAN authentication failed"),
+			expectedStatus: http.StatusBadGateway,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionPowerDown,
+			checkResponse: func(t *testing.T, body string) {
+				assert.Contains(t, body, `"Base.1.11.0.GeneralError"`)
+				assert.Contains(t, body, "upstream service or managed device is unavailable")
+			},
+		},
+		{
+			name:     "upstream communication error - network unreachable",
+			deviceID: "test-device-15",
+			requestBody: map[string]interface{}{
+				"ResetType": resetTypeForceRestart,
+			},
+			mockPowerState: &dto.PowerState{
+				PowerState: cimPowerOn,
+			},
+			mockPowerError: nil,
+			mockResetResp:  power.PowerActionResponse{},
+			mockResetError: errors.New("dial tcp: network unreachable"),
+			expectedStatus: http.StatusBadGateway,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionReset,
+			checkResponse: func(t *testing.T, body string) {
+				assert.Contains(t, body, `"Base.1.11.0.GeneralError"`)
+				assert.Contains(t, body, "upstream service or managed device is unavailable")
+			},
+		},
+		{
+			name:     "service temporarily unavailable - too many connections",
+			deviceID: "test-device-16",
+			requestBody: map[string]interface{}{
+				"ResetType": resetTypeOn,
+			},
+			mockPowerState: &dto.PowerState{
+				PowerState: cimPowerHardOff,
+			},
+			mockPowerError: nil,
+			mockResetResp:  power.PowerActionResponse{},
+			mockResetError: errors.New("too many connections to service"),
+			expectedStatus: http.StatusServiceUnavailable,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionPowerUp,
+			checkResponse: func(t *testing.T, body string) {
+				assert.Contains(t, body, `"Base.1.11.0.GeneralError"`)
+				assert.Contains(t, body, "service is temporarily unavailable")
+			},
+		},
+		{
+			name:     "service temporarily unavailable - rate limit exceeded",
+			deviceID: "test-device-17",
+			requestBody: map[string]interface{}{
+				"ResetType": resetTypeForceOff,
+			},
+			mockPowerState: &dto.PowerState{
+				PowerState: cimPowerOn,
+			},
+			mockPowerError: nil,
+			mockResetResp:  power.PowerActionResponse{},
+			mockResetError: errors.New("rate limit exceeded for client"),
+			expectedStatus: http.StatusServiceUnavailable,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionPowerDown,
+			checkResponse: func(t *testing.T, body string) {
+				assert.Contains(t, body, `"Base.1.11.0.GeneralError"`)
+				assert.Contains(t, body, "service is temporarily unavailable")
+			},
+		},
+		{
+			name:     "service temporarily unavailable - maintenance mode",
+			deviceID: "test-device-18",
+			requestBody: map[string]interface{}{
+				"ResetType": resetTypePowerCycle,
+			},
+			mockPowerState: &dto.PowerState{
+				PowerState: cimPowerOn,
+			},
+			mockPowerError: nil,
+			mockResetResp:  power.PowerActionResponse{},
+			mockResetError: errors.New("system in maintenance mode"),
+			expectedStatus: http.StatusServiceUnavailable,
+			checkPowerCall: true,
+			checkResetCall: true,
+			expectedAction: actionPowerCycle,
+			checkResponse: func(t *testing.T, body string) {
+				assert.Contains(t, body, `"Base.1.11.0.GeneralError"`)
+				assert.Contains(t, body, "service is temporarily unavailable")
 			},
 		},
 	}
@@ -624,10 +770,197 @@ func TestPostSystemResetHandler(t *testing.T) {
 
 			// Assertions
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			
+
 			if tt.checkResponse != nil {
 				tt.checkResponse(t, w.Body.String())
 			}
+		})
+	}
+}
+
+func TestIsUpstreamCommunicationError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "connection timeout error",
+			err:      errors.New("connection timeout"),
+			expected: true,
+		},
+		{
+			name:     "WSMAN error",
+			err:      errors.New("WSMAN authentication failed"),
+			expected: true,
+		},
+		{
+			name:     "AMT error",
+			err:      errors.New("AMT device unreachable"),
+			expected: true,
+		},
+		{
+			name:     "network unreachable error",
+			err:      errors.New("dial tcp: network unreachable"),
+			expected: true,
+		},
+		{
+			name:     "TLS certificate error",
+			err:      errors.New("TLS certificate verification failed"),
+			expected: true,
+		},
+		{
+			name:     "I/O timeout error",
+			err:      errors.New("i/o timeout occurred"),
+			expected: true,
+		},
+		{
+			name:     "connection refused error",
+			err:      errors.New("connection refused by host"),
+			expected: true,
+		},
+		{
+			name:     "unauthorized error",
+			err:      errors.New("unauthorized access to device"),
+			expected: true,
+		},
+		{
+			name:     "general database error",
+			err:      errors.New("database connection failed"),
+			expected: false,
+		},
+		{
+			name:     "validation error",
+			err:      errors.New("invalid parameter provided"),
+			expected: false,
+		},
+		{
+			name:     "not found error",
+			err:      errors.New("device not found"),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isUpstreamCommunicationError(tt.err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestIsServiceTemporarilyUnavailable(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "too many connections error",
+			err:      errors.New("too many connections to database"),
+			expected: true,
+		},
+		{
+			name:     "connection pool exhausted error",
+			err:      errors.New("connection pool exhausted"),
+			expected: true,
+		},
+		{
+			name:     "database pool full error",
+			err:      errors.New("database pool full"),
+			expected: true,
+		},
+		{
+			name:     "service overloaded error",
+			err:      errors.New("service overloaded - try again later"),
+			expected: true,
+		},
+		{
+			name:     "maintenance mode error",
+			err:      errors.New("system in maintenance mode"),
+			expected: true,
+		},
+		{
+			name:     "rate limit exceeded error",
+			err:      errors.New("rate limit exceeded for client"),
+			expected: true,
+		},
+		{
+			name:     "too many requests error",
+			err:      errors.New("too many requests from client"),
+			expected: true,
+		},
+		{
+			name:     "resource exhausted error",
+			err:      errors.New("resource exhausted - retry later"),
+			expected: true,
+		},
+		{
+			name:     "service unavailable error",
+			err:      errors.New("service unavailable temporarily"),
+			expected: true,
+		},
+		{
+			name:     "max connections reached error",
+			err:      errors.New("max connections reached"),
+			expected: true,
+		},
+		{
+			name:     "server overloaded error",
+			err:      errors.New("server overloaded"),
+			expected: true,
+		},
+		{
+			name:     "capacity exceeded error",
+			err:      errors.New("capacity exceeded"),
+			expected: true,
+		},
+		{
+			name:     "throttled error",
+			err:      errors.New("request throttled"),
+			expected: true,
+		},
+		{
+			name:     "circuit breaker error",
+			err:      errors.New("circuit breaker open"),
+			expected: true,
+		},
+		{
+			name:     "general database error",
+			err:      errors.New("database query failed"),
+			expected: false,
+		},
+		{
+			name:     "validation error",
+			err:      errors.New("invalid parameter provided"),
+			expected: false,
+		},
+		{
+			name:     "device not found error",
+			err:      errors.New("device not found"),
+			expected: false,
+		},
+		{
+			name:     "WSMAN communication error",
+			err:      errors.New("WSMAN connection failed"),
+			expected: false, // This should be 502, not 503
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isServiceTemporarilyUnavailable(tt.err)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

@@ -193,3 +193,24 @@ func GeneralError(c *gin.Context) {
 		"None.",
 		nil)
 }
+
+// ServiceUnavailableError returns a Redfish-compliant error for upstream service communication failures (502 Bad Gateway)
+func ServiceUnavailableError(c *gin.Context) {
+	redfishErrorResponse(c, http.StatusBadGateway,
+		BaseErrorMessageID,
+		"The upstream service or managed device is unavailable or unreachable.",
+		"Critical",
+		"Verify network connectivity to the managed device and ensure the device is powered on and accessible.",
+		nil)
+}
+
+// ServiceTemporarilyUnavailableError returns a Redfish-compliant error for temporary service unavailability (503 Service Unavailable)
+func ServiceTemporarilyUnavailableError(c *gin.Context) {
+	c.Header("Retry-After", "30") // Suggest retry after 30 seconds
+	redfishErrorResponse(c, http.StatusServiceUnavailable,
+		BaseErrorMessageID,
+		"The service is temporarily unavailable due to overloading or maintenance. Please retry the request after some time.",
+		"Critical",
+		"Wait for the specified retry period and resubmit the request.",
+		nil)
+}

@@ -70,8 +70,14 @@ func getSystemsCollectionHandler(d devices.Feature, l logger.Interface) gin.Hand
 		items, err := d.Get(c.Request.Context(), maxSystemsList, 0, "")
 		if err != nil {
 			l.Error(err, "http - redfish v1 - Systems collection")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 
+			if isServiceTemporarilyUnavailable(err) {
+				ServiceTemporarilyUnavailableError(c)
+			} else if isUpstreamCommunicationError(err) {
+				ServiceUnavailableError(c)
+			} else {
+				GeneralError(c)
+			}
 			return
 		}
 
@@ -212,7 +218,14 @@ func postSystemResetHandler(d devices.Feature, l logger.Interface) gin.HandlerFu
 			if strings.Contains(strings.ToLower(err.Error()), "not found") ||
 				strings.Contains(err.Error(), "DevicesUseCase") {
 				ResourceNotFoundError(c, "ComputerSystem", id)
+			} else if isServiceTemporarilyUnavailable(err) {
+				// 503 Service Unavailable for temporary service overload/maintenance
+				ServiceTemporarilyUnavailableError(c)
+			} else if isUpstreamCommunicationError(err) {
+				// 502 Bad Gateway for upstream device communication failures
+				ServiceUnavailableError(c)
 			} else {
+				// 500 Internal Server Error for other failures
 				GeneralError(c)
 			}
 			return
@@ -261,3 +274,78 @@ func postSystemResetHandler(d devices.Feature, l logger.Interface) gin.HandlerFu
 		c.JSON(http.StatusOK, taskResponse)
 	}
 }
+
+// isUpstreamCommunicationError determines if an error is due to upstream device communication failure
+func isUpstreamCommunicationError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := strings.ToLower(err.Error())
+
+	// Check for common upstream communication error patterns
+	upstreamErrors := []string{
+		"connection refused",
+		"connection timeout",
+		"timeout",
+		"network unreachable",
+		"no route to host",
+		"connection reset",
+		"wsman",        // WSMAN-specific errors
+		"amt",          // AMT-specific errors
+		"unauthorized", // AMT authentication failures
+		"certificate",  // TLS certificate issues
+		"ssl",          // SSL/TLS errors
+		"tls",          // TLS errors
+		"dial tcp",     // TCP connection errors
+		"i/o timeout",  // I/O timeout errors
+		"connection aborted",
+		"host unreachable",
+	}
+
+	for _, pattern := range upstreamErrors {
+		if strings.Contains(errMsg, pattern) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isServiceTemporarilyUnavailable determines if the service should return 503 due to overload or maintenance
+func isServiceTemporarilyUnavailable(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := strings.ToLower(err.Error())
+
+	// Check for temporary service unavailability patterns
+	serviceUnavailableErrors := []string{
+		"too many connections",
+		"connection pool exhausted",
+		"database pool full",
+		"service overloaded",
+		"maintenance mode",
+		"rate limit exceeded",
+		"too many requests",
+		"resource exhausted",
+		"service unavailable",
+		"temporarily unavailable",
+		"max connections reached",
+		"server overloaded",
+		"capacity exceeded",
+		"throttled",
+		"circuit breaker",
+	}
+
+	for _, pattern := range serviceUnavailableErrors {
+		if strings.Contains(errMsg, pattern) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// NewSystemsRoutes creates the systems routes for the given router group
