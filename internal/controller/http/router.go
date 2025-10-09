@@ -41,6 +41,13 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 	// Public routes
 	login := v1.NewLoginRoute(cfg)
 	handler.POST("/api/v1/authorize", login.Login)
+
+	// Redfish Service Discovery (DMTF recommended pattern)
+	handler.GET("/redfish", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"v1": "/api/redfish/v1/",
+		})
+	})
 	// Static files
 	// Serve static assets (js, css, images, etc.)
 	// Create subdirectory view of the embedded file system
