@@ -31,7 +31,7 @@ auth:
   redirectionJWTExpiration: 5m0s
   clientId: ""
   issuer: ""
-  ui: 
+  ui:
     clientId: ""
     issuer: ""
     scope: ""
@@ -39,4 +39,3 @@ auth:
     responseType: "code"
     requireHttps: false
     strictDiscoveryDocumentValidation: true
-

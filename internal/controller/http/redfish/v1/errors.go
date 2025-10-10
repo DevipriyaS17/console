@@ -24,6 +24,7 @@ const (
 	BaseActionNotSupportedID     = "Base.1.11.0.ActionNotSupported"
 	BaseNoValidSessionID         = "Base.1.11.0.NoValidSession"
 	BaseInsufficientPrivilegeID  = "Base.1.11.0.InsufficientPrivilege"
+	BaseNotAcceptableID          = "Base.1.11.0.NotAcceptable"
 )
 
 // redfishError creates a standard Redfish error response structure
@@ -127,6 +128,19 @@ func MethodNotAllowedError(c *gin.Context, action string, allowedMethods string)
 		[]string{action})
 }
 
+// HTTPMethodNotAllowedError returns a Redfish-compliant error for unsupported HTTP methods (405)
+func HTTPMethodNotAllowedError(c *gin.Context, method string, resourceType string, allowedMethods string) {
+	// Set the required Allow header for 405 responses
+	c.Header("Allow", allowedMethods)
+
+	redfishErrorResponse(c, http.StatusMethodNotAllowed,
+		BaseOperationNotAllowedID,
+		fmt.Sprintf("The HTTP method %s is not allowed on this resource.", method),
+		"Critical",
+		fmt.Sprintf("The operation is not allowed. The %s method is not supported for %s resources. Use one of the allowed methods: %s.", method, resourceType, allowedMethods),
+		[]string{method, resourceType})
+}
+
 // NoValidSessionError returns a Redfish-compliant error for missing or invalid authentication (401)
 func NoValidSessionError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusUnauthorized,
@@ -145,6 +159,16 @@ func InsufficientPrivilegeError(c *gin.Context) {
 		"Critical",
 		"Either abandon the operation or change the associated access rights and resubmit the request if the operation failed for authorization reasons.",
 		nil)
+}
+
+// NotAcceptableError returns a Redfish-compliant error for unsupported media type (406)
+func NotAcceptableError(c *gin.Context, requestedType string) {
+	redfishErrorResponse(c, http.StatusNotAcceptable,
+		BaseNotAcceptableID,
+		fmt.Sprintf("The requested media type '%s' is not acceptable. This service only supports 'application/json'.", requestedType),
+		"Warning",
+		"Resubmit the request with a supported media type in the Accept header.",
+		[]string{requestedType})
 }
 
 // RedfishJWTAuthMiddleware provides Redfish-compliant authentication error responses
@@ -194,7 +218,18 @@ func GeneralError(c *gin.Context) {
 		nil)
 }
 
+// BadGatewayError returns a Redfish-compliant error for upstream service communication failures (502 Bad Gateway)
+func BadGatewayError(c *gin.Context) {
+	redfishErrorResponse(c, http.StatusBadGateway,
+		BaseErrorMessageID,
+		"The upstream service or managed device is unavailable or unreachable.",
+		"Critical",
+		"Verify network connectivity to the managed device and ensure the device is powered on and accessible.",
+		nil)
+}
+
 // ServiceUnavailableError returns a Redfish-compliant error for upstream service communication failures (502 Bad Gateway)
+// Deprecated: Use BadGatewayError for 502 errors or ServiceTemporarilyUnavailableError for 503 errors
 func ServiceUnavailableError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusBadGateway,
 		BaseErrorMessageID,
@@ -213,4 +248,23 @@ func ServiceTemporarilyUnavailableError(c *gin.Context) {
 		"Critical",
 		"Wait for the specified retry period and resubmit the request.",
 		nil)
+}
+
+// RedfishRecoveryMiddleware provides Redfish-compliant error responses for panics (500)
+func RedfishRecoveryMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if err := recover(); err != nil {
+				// Log the panic for debugging
+				fmt.Printf("Panic recovered: %v\n", err)
+
+				// Check if response was already written
+				if !c.Writer.Written() {
+					GeneralError(c)
+				}
+				c.Abort()
+			}
+		}()
+		c.Next()
+	}
 }
