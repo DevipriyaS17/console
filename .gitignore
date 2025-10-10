@@ -28,6 +28,7 @@ build
 console
 app
 @
+console.log
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
