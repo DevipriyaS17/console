@@ -23,7 +23,7 @@ ea:
   username: ""
   password: ""
 auth:
-  disabled: true
+  disabled: false
   adminUsername: standalone
   adminPassword: G@ppm0ym
   jwtKey: your_secret_jwt_key
