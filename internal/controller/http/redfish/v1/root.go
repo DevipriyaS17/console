@@ -162,7 +162,7 @@ func NewServiceRootRoutes(r *gin.RouterGroup, cfg *config.Config, l logger.Inter
 		}
 
 		payload := map[string]any{
-			"@odata.type":    "#ServiceRoot.v1_0_0.ServiceRoot",
+			"@odata.type":    "#ServiceRoot.v1_11_0.ServiceRoot",
 			"@odata.id":      "/redfish/v1/",
 			"Id":             "RootService",
 			"Name":           "Redfish Root Service",
@@ -170,9 +170,11 @@ func NewServiceRootRoutes(r *gin.RouterGroup, cfg *config.Config, l logger.Inter
 			"UUID":           serviceUUID,
 			"Systems":        map[string]any{"@odata.id": "/redfish/v1/Systems"},
 			"SessionService": map[string]any{"@odata.id": "/redfish/v1/SessionService"},
-			// Mandatory Links property (DMTF requirement) - typically empty for ServiceRoot
-			"Links": map[string]any{},
-			// Optional but recommended properties
+			// Mandatory Links property with Sessions reference
+			"Links": map[string]any{
+				"Sessions": map[string]any{"@odata.id": "/redfish/v1/SessionService/Sessions"},
+			},
+			// Optional but recommended properties (supported in v1_11_0)
 			"Product": "Device Management Toolkit Console",
 			"Vendor":  "Intel Corporation",
 		}

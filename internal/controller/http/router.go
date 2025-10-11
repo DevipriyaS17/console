@@ -100,12 +100,38 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 		v1.NewAmtRoutes(h2, t.Devices, t.AMTExplorer, t.Exporter, l)
 	}
 
-	// Redfish v1 routes with custom authentication handling
-	bluefish := handler.Group("/api/redfish/v1")
+	// Redfish service discovery endpoint (required by DMTF spec)
+	handler.GET("/redfish", func(c *gin.Context) {
+		c.Header("Content-Type", "application/json")
+		c.Header("OData-Version", "4.0")
+		c.JSON(http.StatusOK, gin.H{
+			"v1": "/redfish/v1/",
+		})
+	})
+
+	// Support trailing slash for service discovery
+	handler.GET("/redfish/", func(c *gin.Context) {
+		c.Header("Content-Type", "application/json")
+		c.Header("OData-Version", "4.0")
+		c.JSON(http.StatusOK, gin.H{
+			"v1": "/redfish/v1/",
+		})
+	})
+
+	// Redfish v1 routes with custom authentication handling (DMTF standard location)
+	bluefish := handler.Group("/redfish/v1")
+	// Also maintain compatibility with the existing /api/redfish/v1 path
+	bluefishCompat := handler.Group("/api/redfish/v1")
 	{
 		// Redfish v1 Service Root and minimal services
 		redfishv1.NewServiceRootRoutes(bluefish, cfg, l)
 		redfishv1.NewSystemsRoutes(bluefish, t.Devices, cfg, l)
+	}
+
+	// Maintain backward compatibility for existing /api/redfish/v1 path
+	{
+		redfishv1.NewServiceRootRoutes(bluefishCompat, cfg, l)
+		redfishv1.NewSystemsRoutes(bluefishCompat, t.Devices, cfg, l)
 	}
 
 	h := protected.Group("/v1/admin")
