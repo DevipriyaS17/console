@@ -134,15 +134,15 @@ func TestServiceRootEndpoint(t *testing.T) {
 				assert.Equal(t, "application/json; charset=utf-8", headers.Get("Content-Type"))
 				assert.Equal(t, "no-cache", headers.Get("Cache-Control"))
 
-				// Check JSON structure
-				assert.Contains(t, body, `"@odata.type":"#ServiceRoot.v1_0_0.ServiceRoot"`)
+				// Check JSON structure (DMTF v1.11.0 compliant)
+				assert.Contains(t, body, `"@odata.type":"#ServiceRoot.v1_11_0.ServiceRoot"`)
 				assert.Contains(t, body, `"@odata.id":"/redfish/v1/"`)
 				assert.Contains(t, body, `"Id":"RootService"`)
 				assert.Contains(t, body, `"Name":"Redfish Root Service"`)
 				assert.Contains(t, body, `"RedfishVersion":"1.11.0"`)
 				assert.Contains(t, body, `"Systems":{"@odata.id":"/redfish/v1/Systems"}`)
 				assert.Contains(t, body, `"SessionService":{"@odata.id":"/redfish/v1/SessionService"}`)
-				assert.Contains(t, body, `"Links":{}`)
+				assert.Contains(t, body, `"Links":{"Sessions":{"@odata.id":"/redfish/v1/SessionService/Sessions"}}`)
 				assert.Contains(t, body, `"Product":"Device Management Toolkit Console"`)
 				assert.Contains(t, body, `"Vendor":"Intel Corporation"`)
 				assert.Contains(t, body, `"UUID":`)
@@ -156,7 +156,7 @@ func TestServiceRootEndpoint(t *testing.T) {
 			authDisabled:   true,
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, body string, headers http.Header) {
-				assert.Contains(t, body, `"@odata.type":"#ServiceRoot.v1_0_0.ServiceRoot"`)
+				assert.Contains(t, body, `"@odata.type":"#ServiceRoot.v1_11_0.ServiceRoot"`)
 			},
 		},
 		{
@@ -167,7 +167,7 @@ func TestServiceRootEndpoint(t *testing.T) {
 			authDisabled:   true,
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, body string, headers http.Header) {
-				assert.Contains(t, body, `"@odata.type":"#ServiceRoot.v1_0_0.ServiceRoot"`)
+				assert.Contains(t, body, `"@odata.type":"#ServiceRoot.v1_11_0.ServiceRoot"`)
 			},
 		},
 		{
