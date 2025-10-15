@@ -129,7 +129,7 @@ Both endpoints provide access to the same AMT device, but with different data re
 - **DMT API** returns DMT-specific JSON structure
 - **Redfish API** returns DMTF-compliant ComputerSystem schema
 
-#### fish Aggregation Workflow Example
+#### Redfish Aggregation Workflow Example
 
 The following sequence diagram illustrates how the DMT Console aggregates multiple onboarded AMT devices into a unified Redfish Systems collection:
 
@@ -175,16 +175,67 @@ This approach ensures that **all existing DMT investments and procedures remain 
 
 ### High-Level Architecture Overview
 
-This section describes the architecture of the DMT Console's Redfish implementation, including component interactions, data flow patterns, and system boundaries. It covers how the DMT Console integrates with the existing DMT ecosystem while providing DMTF-compliant Redfish services.
+In the following diagram, we present the high-level architecture of the DMT Console's Redfish implementation.
+
+```mermaid
+flowchart LR
+  subgraph Clients[Clients]
+    UI[Sample Web UI]
+    Scripts[DMT Automation Scripts]
+    Redfish[Redfish Tools]
+    RedfishSuites[Redfish Interop Suites]
+  end
+  APIGW[API Gateway]
+  subgraph Backend[DMT Console]
+    Router[HTTP / WS Router]
+    Config[Configuration Management]
+    Middleware[JWT / CORS Middleware]
+    HTTPControllers[HTTP Controllers v1/v2]
+    WSControllers[WebSocket Controllers]
+    UseCases[Use Case Layer]
+    Translator[WS-MAN Translator]
+    Repositories[Repository Layer]
+    Entities[Entity Layer]
+    RedfishControllers[Redfish Controllers v1]
+    RedfishTranslator[Redfish to WS-MAN Translator]
+
+  end
+  DB[(PostgreSQL / SQLite)]
+  Migrations[[DB Migrations]]
+  WSMan[WS-MAN]
+  Device[Intel AMT Device]
+  OIDC[OIDC Providers]
+
+
+  UI --> APIGW
+  Redfish --> APIGW
+  RedfishSuites --> APIGW
+  Scripts --> APIGW
+  APIGW --> Router
+  Router --> Middleware
+  Router --> Config
+  Middleware --> HTTPControllers
+  Middleware --> WSControllers
+  Middleware --> RedfishControllers
+  HTTPControllers --> UseCases
+  WSControllers --> UseCases
+  UseCases --> Repositories --> DB
+  UseCases --> Entities
+  UseCases --> Translator --> WSMan --> Device
+  RedfishControllers --> RedfishTranslator --> WSMan
+  Migrations --> DB
+  Middleware --> OIDC
+
+  %% Styling for Redfish components
+  classDef redfishComponents fill:#e1f5fe,stroke:#0277bd,stroke-width:3px,color:#000
+  class RedfishControllers,RedfishTranslator redfishComponents
+```
 
 **Topics to be covered:**
 
-- Overall system architecture diagrams
 - Component responsibilities and interfaces
 - Integration points with existing DMT services
-- Scalability and performance considerations
 - Error handling and fault tolerance mechanisms
-- Logging and monitoring strategies
 
 ## Redfish Resource Mapping
 
