@@ -1,4 +1,4 @@
-// Package v1 implements routing paths. Each services in own file.
+// Package http implements routing paths. Each services in own file.
 package http
 
 import (
@@ -16,6 +16,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/device-management-toolkit/console/config"
+	redfishv1 "github.com/device-management-toolkit/console/internal/controller/http/redfish/v1"
 	v1 "github.com/device-management-toolkit/console/internal/controller/http/v1"
 	v2 "github.com/device-management-toolkit/console/internal/controller/http/v2"
 	"github.com/device-management-toolkit/console/internal/usecase"
@@ -111,6 +112,13 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 	h3 := protected.Group("/v2")
 	{
 		v2.NewAmtRoutes(h3, t.Devices, l)
+	}
+
+	// Redfish API v1 routes
+	redfish := handler.Group("/api/redfish/v1")
+	{
+		redfishv1.NewServiceRootRoutes(redfish, cfg, l)
+		redfishv1.NewSystemsRoutes(redfish, t.Devices, l)
 	}
 
 	// Catch-all route to serve index.html for any route not matched above to be handled by Angular

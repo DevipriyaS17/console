@@ -1,3 +1,9 @@
+/*********************************************************************
+ * Copyright (c) Intel Corporation 2025
+ * SPDX-License-Identifier: Apache-2.0
+ **********************************************************************/
+
+// Package v1 implements Redfish API v1 error handling and utilities.
 package v1
 
 import (
