@@ -12,7 +12,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Set up Git
         run: |
@@ -20,13 +21,14 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
       - name: Add upstream remote
-        run: git remote add upstream https://github.com/device-management-toolkit/console.git
+        run: |
+          git remote add upstream https://github.com/device-management-toolkit/console.git || true
 
       - name: Fetch upstream
         run: git fetch upstream
 
       - name: Merge upstream/main
-        run: git merge upstream/main
+        run: git merge upstream/main --allow-unrelated-histories --no-edit
 
       - name: Push changes
         env:
