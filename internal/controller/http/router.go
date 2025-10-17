@@ -117,8 +117,7 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 	// Redfish API v1 routes
 	redfish := handler.Group("/api/redfish/v1")
 	{
-		redfishv1.NewServiceRootRoutes(redfish, cfg, l)
-		redfishv1.NewSystemsRoutes(redfish, t.Devices, l)
+		redfishv1.NewSystemsRoutes(redfish, t.Devices, cfg, l)
 	}
 
 	// Catch-all route to serve index.html for any route not matched above to be handled by Angular

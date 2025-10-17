@@ -198,10 +198,12 @@ func parseResetRequest(c *gin.Context) (int, bool) {
 }
 
 // checkPowerStateConflict checks if the requested action conflicts with current power state
-func checkPowerStateConflict(c *gin.Context, d devices.Feature, id string, action int) bool {
+func checkPowerStateConflict(c *gin.Context, d devices.Feature, l logger.Interface, id string, action int) bool {
 	currentPowerState, err := d.GetPowerState(c.Request.Context(), id)
 	if err != nil {
-		// If we can't get the power state, continue with the action anyway
+		// Log the warning and continue with the action anyway
+		l.Warn("redfish v1 - Systems instance: failed to get power state for %s: %v", id, err)
+
 		return false
 	}
 
@@ -325,7 +327,7 @@ func postSystemResetHandler(d devices.Feature, l logger.Interface) gin.HandlerFu
 		}
 
 		// Check for power state conflicts
-		if conflictDetected := checkPowerStateConflict(c, d, id, action); conflictDetected {
+		if conflictDetected := checkPowerStateConflict(c, d, l, id, action); conflictDetected {
 			return
 		}
 
