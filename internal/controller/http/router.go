@@ -19,6 +19,7 @@ import (
 	redfishv1 "github.com/device-management-toolkit/console/internal/controller/http/redfish/v1"
 	v1 "github.com/device-management-toolkit/console/internal/controller/http/v1"
 	v2 "github.com/device-management-toolkit/console/internal/controller/http/v2"
+	openapi "github.com/device-management-toolkit/console/internal/controller/openapi"
 	"github.com/device-management-toolkit/console/internal/usecase"
 	"github.com/device-management-toolkit/console/pkg/logger"
 )
@@ -37,6 +38,11 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 	// Options
 	handler.Use(gin.Logger())
 	handler.Use(gin.Recovery())
+
+	// Initialize Fuego adapter
+	fuegoAdapter := openapi.NewFuegoAdapter(t, l)
+	fuegoAdapter.RegisterRoutes()
+	fuegoAdapter.AddToGinRouter(handler)
 
 	// Public routes
 	login := v1.NewLoginRoute(cfg)
