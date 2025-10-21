@@ -114,11 +114,19 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 		v2.NewAmtRoutes(h3, t.Devices, l)
 	}
 
-	// Redfish API v1 routes
-	redfish := handler.Group("/api/redfish/v1")
+	// Redfish API v1 routes - with optional authentication based on configuration
+	var redfish *gin.RouterGroup
+	if cfg.Disabled {
+		// No authentication in disabled mode
+		redfish = handler.Group("/api/redfish/v1")
+	} else {
+		// Use Redfish-specific auth middleware that provides proper error responses
+		redfish = handler.Group("/api/redfish/v1", redfishv1.RedfishJWTAuthMiddleware(cfg))
+	}
 	{
 		redfishv1.NewServiceRootRoutes(redfish, cfg, l)
 		redfishv1.NewSystemsRoutes(redfish, t.Devices, l)
+		redfishv1.NewChassisRoutes(redfish, t.Devices, l)
 	}
 
 	// Catch-all route to serve index.html for any route not matched above to be handled by Angular

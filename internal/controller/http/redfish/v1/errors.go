@@ -258,6 +258,68 @@ func ServiceTemporarilyUnavailableError(c *gin.Context) {
 		nil)
 }
 
+// PreconditionFailedError returns a Redfish-compliant error for ETag mismatches (412 Precondition Failed)
+func PreconditionFailedError(c *gin.Context) {
+	redfishErrorResponse(c, http.StatusPreconditionFailed,
+		"Base.1.11.0.PreconditionFailed",
+		"The ETag supplied did not match the ETag of the resource.",
+		"Critical",
+		"Resubmit the request with the current ETag of the resource.",
+		nil)
+}
+
+// RequestEntityTooLargeError returns a Redfish-compliant error for oversized requests (413 Request Entity Too Large)
+func RequestEntityTooLargeError(c *gin.Context, maxSize string) {
+	redfishErrorResponse(c, http.StatusRequestEntityTooLarge,
+		"Base.1.11.0.PayloadTooLarge",
+		fmt.Sprintf("The request payload is too large. Maximum allowed size is %s.", maxSize),
+		"Critical",
+		"Reduce the size of the request payload and resubmit the request.",
+		[]string{maxSize})
+}
+
+// UnsupportedMediaTypeError returns a Redfish-compliant error for invalid Content-Type (415 Unsupported Media Type)
+func UnsupportedMediaTypeError(c *gin.Context, mediaType string) {
+	redfishErrorResponse(c, http.StatusUnsupportedMediaType,
+		"Base.1.11.0.UnsupportedMediaType",
+		fmt.Sprintf("The media type '%s' is not supported. This service only supports 'application/json'.", mediaType),
+		"Critical",
+		"Resubmit the request with a supported media type in the Content-Type header.",
+		[]string{mediaType})
+}
+
+// CreatedResponse returns a Redfish-compliant 201 response for resource creation
+func CreatedResponse(c *gin.Context, location string, resource interface{}) {
+	SetRedfishHeaders(c)
+	c.Header("Location", location)
+	c.JSON(http.StatusCreated, resource)
+}
+
+// AcceptedResponse returns a Redfish-compliant 202 response for async operations
+func AcceptedResponse(c *gin.Context, taskMonitor string) {
+	SetRedfishHeaders(c)
+	c.Header("Location", taskMonitor)
+	c.JSON(http.StatusAccepted, map[string]interface{}{
+		"TaskMonitor": taskMonitor,
+	})
+}
+
+// NoContentResponse returns a Redfish-compliant 204 response for successful operations with no content
+func NoContentResponse(c *gin.Context) {
+	SetRedfishHeaders(c)
+	c.Status(http.StatusNoContent)
+}
+
+// NotImplementedError returns a Redfish-compliant error for unimplemented features (501 Not Implemented)
+func NotImplementedError(c *gin.Context, feature string) {
+	redfishErrorResponse(c, http.StatusNotImplemented,
+		"Base.1.11.0.ActionNotSupported",
+		fmt.Sprintf("The feature '%s' is not implemented by this service.", feature),
+		"Critical",
+		"The requested feature is not supported by this implementation.",
+		[]string{feature})
+}
+
 // RedfishRecoveryMiddleware provides Redfish-compliant error responses for panics (500)
 func RedfishRecoveryMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
