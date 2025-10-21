@@ -1,3 +1,9 @@
+/*********************************************************************
+ * Copyright (c) Intel Corporation 2025
+ * SPDX-License-Identifier: Apache-2.0
+ **********************************************************************/
+
+// Package v1 implements Redfish API v1 error handling and utilities.
 package v1
 
 import (
@@ -36,12 +42,18 @@ const (
 // - GET /redfish/v1/Systems
 // - GET /redfish/v1/Systems/:id
 // - POST /redfish/v1/Systems/:id/Actions/ComputerSystem.Reset
+// - GET /redfish/v1/Systems/:id/FirmwareInventory
+// - GET /redfish/v1/Systems/:id/FirmwareInventory/:firmwareId
 // The :id is expected to be the device GUID and will be mapped directly to SendPowerAction.
 func NewSystemsRoutes(r *gin.RouterGroup, d devices.Feature, l logger.Interface) {
 	systems := r.Group("/Systems")
 	systems.GET("", getSystemsCollectionHandler(d, l))
 	systems.GET(":id", getSystemInstanceHandler(d, l))
 	systems.POST(":id/Actions/ComputerSystem.Reset", postSystemResetHandler(d, l))
+
+	// Add firmware inventory routes
+	NewFirmwareRoutes(systems, d, l)
+
 	l.Info("Registered Redfish Systems routes under %s", r.BasePath()+"/Systems")
 }
 
