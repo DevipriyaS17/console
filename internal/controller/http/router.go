@@ -127,7 +127,7 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 	}
 
 	// Redfish API v1 routes
-	redfish := handler.Group("/api/redfish/v1")
+	redfish := handler.Group("/redfish/v1")
 	{
 		redfishv1.NewServiceRootRoutes(redfish, cfg, l)
 		redfishv1.NewSystemsRoutes(redfish, t.Devices, l)
