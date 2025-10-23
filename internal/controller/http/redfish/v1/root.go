@@ -110,7 +110,7 @@ func serviceRootHandler(c *gin.Context) {
 
 	// Validate Accept header (406 Not Acceptable)
 	acceptHeader := c.GetHeader("Accept")
-	if acceptHeader != "" && acceptHeader != "*/*" && acceptHeader != "application/json" &&
+	if acceptHeader != "" && acceptHeader != acceptAll && acceptHeader != "application/json" &&
 		!strings.Contains(acceptHeader, "application/json") && !strings.Contains(acceptHeader, "*/*") {
 		NotAcceptableError(c, acceptHeader)
 
@@ -178,6 +178,7 @@ func serviceRootHandler(c *gin.Context) {
 		"RedfishVersion": "1.11.0",
 		"UUID":           serviceUUID,
 		"Systems":        map[string]any{"@odata.id": "/redfish/v1/Systems"},
+		"Chassis":        map[string]any{"@odata.id": "/redfish/v1/Chassis"},
 		"SessionService": map[string]any{"@odata.id": "/redfish/v1/SessionService"},
 		// Mandatory Links property with Sessions reference
 		"Links": map[string]any{
@@ -305,6 +306,7 @@ func metadataHandler(c *gin.Context) {
 				<Property Name="RedfishVersion" Type="Edm.String"/>
 				<NavigationProperty Name="SessionService" Type="Redfish.SessionService"/>
 				<NavigationProperty Name="Systems" Type="Collection(Redfish.ComputerSystem)"/>
+				<NavigationProperty Name="Chassis" Type="Collection(Redfish.Chassis)"/>
 			</EntityType>
 			<EntityType Name="SessionService">
 				<Key><PropertyRef Name="Id"/></Key>
@@ -325,6 +327,15 @@ func metadataHandler(c *gin.Context) {
 				<Property Name="Id" Type="Edm.String" Nullable="false"/>
 				<Property Name="Name" Type="Edm.String"/>
 				<Property Name="PowerState" Type="Edm.String"/>
+			</EntityType>
+			<EntityType Name="Chassis">
+				<Key><PropertyRef Name="Id"/></Key>
+				<Property Name="Id" Type="Edm.String" Nullable="false"/>
+				<Property Name="Name" Type="Edm.String"/>
+				<Property Name="ChassisType" Type="Edm.String"/>
+				<Property Name="Manufacturer" Type="Edm.String"/>
+				<Property Name="Model" Type="Edm.String"/>
+				<Property Name="SerialNumber" Type="Edm.String"/>
 			</EntityType>
 			<EntityContainer Name="Service">
 				<EntitySet Name="ServiceRoot" EntityType="Redfish.ServiceRoot"/>
