@@ -1,4 +1,9 @@
-// Package v1 implements Redfish API v1 ComputerSystem resources and actions.
+/*********************************************************************
+ * Copyright (c) Intel Corporation 2025
+ * SPDX-License-Identifier: Apache-2.0
+ **********************************************************************/
+
+// Package v1 implements Redfish API v1 error handling and utilities.
 package v1
 
 import (
@@ -50,6 +55,8 @@ const (
 // - GET /redfish/v1/Systems/:id (individual system)
 // - POST /redfish/v1/Systems/:id/Actions/ComputerSystem.Reset (reset action)
 // - GET/PUT/PATCH/DELETE /redfish/v1/Systems/:id/Actions/ComputerSystem.Reset (405 Method Not Allowed)
+// - GET /redfish/v1/Systems/:id/FirmwareInventory (individual system)
+// - GET /redfish/v1/Systems/:id/FirmwareInventory/:firmwareId (individual system/firmware type)
 // The :id is expected to be the device GUID and will be mapped directly to SendPowerAction.
 func NewSystemsRoutes(r *gin.RouterGroup, d devices.Feature, cfg *config.Config, l logger.Interface) {
 	systems := r.Group("/Systems")
@@ -69,7 +76,10 @@ func NewSystemsRoutes(r *gin.RouterGroup, d devices.Feature, cfg *config.Config,
 	systems.PATCH(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
 	systems.DELETE(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
 
-	l.Info("Registered Redfish v1 Systems routes under %s", r.BasePath()+"/Systems")
+	// Add firmware inventory routes
+	NewFirmwareRoutes(systems, d, l)
+
+	l.Info("Registered Redfish Systems routes under %s", r.BasePath()+"/Systems")
 }
 
 func getSystemsCollectionHandler(d devices.Feature, l logger.Interface) gin.HandlerFunc {

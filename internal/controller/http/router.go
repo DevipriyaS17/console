@@ -12,8 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/device-management-toolkit/console/config"
 	redfishv1 "github.com/device-management-toolkit/console/internal/controller/http/redfish/v1"
@@ -28,12 +26,6 @@ import (
 var content embed.FS
 
 // NewRouter -.
-// Swagger spec:
-// @title       Console API for Device Management Toolkit
-// @description Provides a single pane of glass for managing devices with Intel® Active Management Technology and other device technologies
-// @version     1.0
-// @host        localhost:8181
-// @BasePath    /v1
 func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg *config.Config) { //nolint:funlen // This function is responsible for setting up the router, so it's expected to be long
 	// Options
 	handler.Use(gin.Logger())
@@ -82,10 +74,6 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Usecases, cfg 
 		filePath := "." + relativePath
 		handler.StaticFileFS(relativePath, filePath, http.FS(staticFiles))
 	}
-
-	// Swagger
-	swaggerHandler := ginSwagger.DisablingWrapHandler(swaggerFiles.Handler, "DISABLE_SWAGGER_HTTP_HANDLER")
-	handler.GET("/swagger/*any", swaggerHandler)
 
 	// K8s probe
 	handler.GET("/healthz", func(c *gin.Context) { c.Status(http.StatusOK) })
