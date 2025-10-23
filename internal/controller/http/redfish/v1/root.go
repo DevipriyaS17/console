@@ -35,7 +35,7 @@ func generateServiceUUID() string {
 	_, err := rand.Read(uuid)
 	if err != nil {
 		// Fallback to a static UUID if random generation fails
-		return "550e8400-e29b-41d4-a716-446655440000"
+		return DefaultServiceUUID
 	}
 
 	// Set version (4) and variant bits
@@ -109,9 +109,9 @@ func serviceRootHandler(c *gin.Context) {
 	SetRedfishHeaders(c)
 
 	// Validate Accept header (406 Not Acceptable)
-	acceptHeader := c.GetHeader("Accept")
-	if acceptHeader != "" && acceptHeader != "*/*" && acceptHeader != "application/json" &&
-		!strings.Contains(acceptHeader, "application/json") && !strings.Contains(acceptHeader, "*/*") {
+	acceptHeader := c.GetHeader(HeaderAccept)
+	if acceptHeader != "" && acceptHeader != MediaTypeWildcard && acceptHeader != MediaTypeJSON &&
+		!strings.Contains(acceptHeader, MediaTypeJSON) && !strings.Contains(acceptHeader, MediaTypeWildcard) {
 		NotAcceptableError(c, acceptHeader)
 
 		return
@@ -171,21 +171,21 @@ func serviceRootHandler(c *gin.Context) {
 	}
 
 	payload := map[string]any{
-		"@odata.type":    "#ServiceRoot.v1_11_0.ServiceRoot",
-		"@odata.id":      "/redfish/v1/",
-		"Id":             "RootService",
-		"Name":           "Redfish Root Service",
-		"RedfishVersion": "1.11.0",
+		"@odata.type":    SchemaServiceRoot,
+		"@odata.id":      PathRedfishRoot,
+		"Id":             ServiceRootID,
+		"Name":           ServiceRootName,
+		"RedfishVersion": RedfishVersion,
 		"UUID":           serviceUUID,
-		"Systems":        map[string]any{"@odata.id": "/redfish/v1/Systems"},
-		"SessionService": map[string]any{"@odata.id": "/redfish/v1/SessionService"},
+		"Systems":        map[string]any{"@odata.id": PathSystems},
+		"SessionService": map[string]any{"@odata.id": PathSessionService},
 		// Mandatory Links property with Sessions reference
 		"Links": map[string]any{
-			"Sessions": map[string]any{"@odata.id": "/redfish/v1/SessionService/Sessions"},
+			"Sessions": map[string]any{"@odata.id": PathSessionServiceSessions},
 		},
 		// Optional but recommended properties (supported in v1_11_0)
-		"Product": "Device Management Toolkit Console",
-		"Vendor":  "Intel Corporation",
+		"Product": ServiceProduct,
+		"Vendor":  ServiceVendor,
 	}
 
 	c.JSON(http.StatusOK, payload)
@@ -194,32 +194,32 @@ func serviceRootHandler(c *gin.Context) {
 // registerServiceRootMethodHandlers registers unsupported method handlers for ServiceRoot
 func registerServiceRootMethodHandlers(r *gin.RouterGroup) {
 	r.POST("/", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "POST", "ServiceRoot", "GET")
+		HTTPMethodNotAllowedError(c, MethodPOST, "ServiceRoot", MethodGET)
 	})
 	r.PUT("/", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PUT", "ServiceRoot", "GET")
+		HTTPMethodNotAllowedError(c, MethodPUT, "ServiceRoot", MethodGET)
 	})
 	r.PATCH("/", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PATCH", "ServiceRoot", "GET")
+		HTTPMethodNotAllowedError(c, MethodPATCH, "ServiceRoot", MethodGET)
 	})
 	r.DELETE("/", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "DELETE", "ServiceRoot", "GET")
+		HTTPMethodNotAllowedError(c, MethodDELETE, "ServiceRoot", MethodGET)
 	})
 }
 
 // registerSystemsMethodHandlers registers unsupported method handlers for Systems collection
 func registerSystemsMethodHandlers(r *gin.RouterGroup) {
 	r.POST("/Systems", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "POST", "ComputerSystemCollection", "GET")
+		HTTPMethodNotAllowedError(c, MethodPOST, "ComputerSystemCollection", MethodGET)
 	})
 	r.PUT("/Systems", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PUT", "ComputerSystemCollection", "GET")
+		HTTPMethodNotAllowedError(c, MethodPUT, "ComputerSystemCollection", MethodGET)
 	})
 	r.PATCH("/Systems", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PATCH", "ComputerSystemCollection", "GET")
+		HTTPMethodNotAllowedError(c, MethodPATCH, "ComputerSystemCollection", MethodGET)
 	})
 	r.DELETE("/Systems", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "DELETE", "ComputerSystemCollection", "GET")
+		HTTPMethodNotAllowedError(c, MethodDELETE, "ComputerSystemCollection", MethodGET)
 	})
 }
 
@@ -263,13 +263,13 @@ func sessionServiceHandler(c *gin.Context) {
 	SetRedfishHeaders(c)
 
 	payload := map[string]any{
-		"@odata.type":    "#SessionService.v1_0_0.SessionService",
-		"@odata.id":      "/redfish/v1/SessionService",
+		"@odata.type":    SchemaSessionService,
+		"@odata.id":      PathSessionService,
 		"Id":             "SessionService",
 		"Name":           "Redfish Session Service",
 		"ServiceEnabled": true,
 		"SessionTimeout": 30,
-		"Sessions":       map[string]any{"@odata.id": "/redfish/v1/SessionService/Sessions"},
+		"Sessions":       map[string]any{"@odata.id": PathSessionServiceSessions},
 	}
 
 	c.JSON(http.StatusOK, payload)
@@ -281,8 +281,8 @@ func sessionsCollectionHandler(c *gin.Context) {
 	SetRedfishHeaders(c)
 
 	payload := map[string]any{
-		"@odata.type":         "#SessionCollection.SessionCollection",
-		"@odata.id":           "/redfish/v1/SessionService/Sessions",
+		"@odata.type":         SchemaSessionCollection,
+		"@odata.id":           PathSessionServiceSessions,
 		"Name":                "Session Collection",
 		"Members@odata.count": 0,
 		"Members":             []any{},

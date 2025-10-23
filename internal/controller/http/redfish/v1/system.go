@@ -207,7 +207,8 @@ func parseResetRequest(c *gin.Context) (int, bool) {
 	return action, true
 }
 
-// checkPowerStateConflict checks if the requested action conflicts with current power state
+// checkPowerStateConflict checks if the requested action conflicts with current power state.
+// Returns true if a conflict is detected, false otherwise.
 func checkPowerStateConflict(c *gin.Context, d devices.Feature, l logger.Interface, id string, action int) bool {
 	currentPowerState, err := d.GetPowerState(c.Request.Context(), id)
 	if err != nil {
@@ -221,26 +222,19 @@ func checkPowerStateConflict(c *gin.Context, d devices.Feature, l logger.Interfa
 	isCurrentlyOn := (currentPowerState.PowerState == cimPowerOn)
 	isCurrentlyOff := (currentPowerState.PowerState == cimPowerSoftOff || currentPowerState.PowerState == cimPowerHardOff)
 
-	var shouldReturnConflict bool
-
 	switch action {
 	case actionPowerUp: // Power On
-		if isCurrentlyOn {
-			shouldReturnConflict = true
-		}
+		return isCurrentlyOn
 	case actionPowerDown: // Power Off
-		if isCurrentlyOff {
-			shouldReturnConflict = true
-		}
-	}
-
-	if shouldReturnConflict {
-		OperationNotAllowedError(c)
-
-		return true
+		return isCurrentlyOff
 	}
 
 	return false
+}
+
+// handlePowerStateConflict sends an appropriate error response for power state conflicts
+func handlePowerStateConflict(c *gin.Context) {
+	OperationNotAllowedError(c)
 }
 
 // handleResetError handles different types of errors from power action
@@ -310,15 +304,15 @@ func generateSecureTaskID() string {
 
 // determineTaskResult determines task state and status based on power action result
 func determineTaskResult(res power.PowerActionResponse) (taskState, taskStatus, messageID, message string) {
-	taskState = "Completed"
-	taskStatus = "OK"
+	taskState = TaskStateCompleted
+	taskStatus = TaskStatusOK
 	messageID = BaseSuccessMessageID
 	message = "The request completed successfully."
 
 	// Check if the operation was successful based on ReturnValue
 	if int(res.ReturnValue) != 0 {
-		taskState = "Exception"
-		taskStatus = "Critical"
+		taskState = TaskStateException
+		taskStatus = TaskStatusCritical
 		messageID = BaseErrorMessageID
 		message = "A general error has occurred."
 	}
@@ -338,6 +332,8 @@ func postSystemResetHandler(d devices.Feature, l logger.Interface) gin.HandlerFu
 
 		// Check for power state conflicts
 		if conflictDetected := checkPowerStateConflict(c, d, l, id, action); conflictDetected {
+			handlePowerStateConflict(c)
+
 			return
 		}
 

@@ -18,7 +18,6 @@ import (
 // Firmware-related constants
 const (
 	// Common string constants
-	unknownValue       = "Unknown"
 	biosID             = "BIOS"
 	sleepDurationMs    = 100
 	systemManufacturer = "System Manufacturer"
@@ -79,30 +78,30 @@ func NewFirmwareRoutes(systems *gin.RouterGroup, d devices.Feature, l logger.Int
 
 	// Register method-not-allowed handlers for FirmwareInventory collection
 	systems.POST(":id/FirmwareInventory", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "POST", "SoftwareInventoryCollection", "GET")
+		HTTPMethodNotAllowedError(c, MethodPOST, "SoftwareInventoryCollection", MethodGET)
 	})
 	systems.PUT(":id/FirmwareInventory", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PUT", "SoftwareInventoryCollection", "GET")
+		HTTPMethodNotAllowedError(c, MethodPUT, "SoftwareInventoryCollection", MethodGET)
 	})
 	systems.PATCH(":id/FirmwareInventory", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PATCH", "SoftwareInventoryCollection", "GET")
+		HTTPMethodNotAllowedError(c, MethodPATCH, "SoftwareInventoryCollection", MethodGET)
 	})
 	systems.DELETE(":id/FirmwareInventory", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "DELETE", "SoftwareInventoryCollection", "GET")
+		HTTPMethodNotAllowedError(c, MethodDELETE, "SoftwareInventoryCollection", MethodGET)
 	})
 
 	// Register method-not-allowed handlers for FirmwareInventory instances
 	systems.POST(":id/FirmwareInventory/:firmwareId", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "POST", "SoftwareInventory", "GET")
+		HTTPMethodNotAllowedError(c, MethodPOST, "SoftwareInventory", MethodGET)
 	})
 	systems.PUT(":id/FirmwareInventory/:firmwareId", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PUT", "SoftwareInventory", "GET")
+		HTTPMethodNotAllowedError(c, MethodPUT, "SoftwareInventory", MethodGET)
 	})
 	systems.PATCH(":id/FirmwareInventory/:firmwareId", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PATCH", "SoftwareInventory", "GET")
+		HTTPMethodNotAllowedError(c, MethodPATCH, "SoftwareInventory", MethodGET)
 	})
 	systems.DELETE(":id/FirmwareInventory/:firmwareId", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "DELETE", "SoftwareInventory", "GET")
+		HTTPMethodNotAllowedError(c, MethodDELETE, "SoftwareInventory", MethodGET)
 	})
 
 	l.Info("Registered Redfish FirmwareInventory routes under %s", systems.BasePath())
@@ -123,8 +122,8 @@ func parseBIOSInfo(hwInfo interface{}) (version, versionString, manufacturer, re
 // extractBIOSDetails handles the complex parsing logic for BIOS information
 func extractBIOSDetails(hwInfo interface{}) (version, versionString, manufacturer, releaseDate string) {
 	// Set defaults
-	version = unknownValue
-	versionString = unknownValue
+	version = UnknownValue
+	versionString = UnknownValue
 	manufacturer = systemManufacturer
 	releaseDate = time.Now().UTC().Format("2006-01-02") // Fallback to current date if not found
 
@@ -142,8 +141,8 @@ func extractBIOSDetails(hwInfo interface{}) (version, versionString, manufacture
 
 // parseFromMap extracts BIOS info from map structure
 func parseFromMap(hwInfoMap map[string]interface{}) (version, versionString, manufacturer, releaseDate string) {
-	version = unknownValue
-	versionString = unknownValue
+	version = UnknownValue
+	versionString = UnknownValue
 	manufacturer = systemManufacturer
 	releaseDate = time.Now().UTC().Format("2006-01-02")
 
@@ -169,8 +168,8 @@ func parseResponse(response interface{}, _, _, _, _ string) (version, versionStr
 
 // parseFromResponseMap extracts BIOS info from response map
 func parseFromResponseMap(responseMap map[string]interface{}) (version, versionString, manufacturer, releaseDate string) {
-	version = unknownValue
-	versionString = unknownValue
+	version = UnknownValue
+	versionString = UnknownValue
 	manufacturer = systemManufacturer
 	releaseDate = time.Now().UTC().Format("2006-01-02")
 
@@ -193,7 +192,7 @@ func parseFromResponseMap(responseMap map[string]interface{}) (version, versionS
 	if releaseDateObj, exists := responseMap["ReleaseDate"]; exists {
 		releaseDate = extractReleaseDateFromMap(releaseDateObj, version, releaseDate)
 
-		if version != unknownValue {
+		if version != UnknownValue {
 			versionString = fmt.Sprintf("%s (Released: %s)", version, releaseDate)
 		}
 	}
@@ -229,8 +228,8 @@ func extractReleaseDateFromMap(releaseDateObj interface{}, _, defaultReleaseDate
 
 // parseFromStruct handles response as a struct using reflection
 func parseFromStruct(response interface{}) (version, versionString, manufacturer, releaseDate string) {
-	version = unknownValue
-	versionString = unknownValue
+	version = UnknownValue
+	versionString = UnknownValue
 	manufacturer = systemManufacturer
 	releaseDate = time.Now().UTC().Format("2006-01-02")
 
@@ -249,8 +248,8 @@ func parseFromStruct(response interface{}) (version, versionString, manufacturer
 
 // extractFieldsFromStruct processes struct fields to extract BIOS information
 func extractFieldsFromStruct(responseValue reflect.Value) (version, versionString, manufacturer, releaseDate string) {
-	version = unknownValue
-	versionString = unknownValue
+	version = UnknownValue
+	versionString = UnknownValue
 	manufacturer = systemManufacturer
 	releaseDate = time.Now().UTC().Format("2006-01-02")
 
@@ -268,7 +267,7 @@ func extractFieldsFromStruct(responseValue reflect.Value) (version, versionStrin
 			manufacturer = extractManufacturerFromField(fieldValue)
 		case "ReleaseDate":
 			releaseDate = extractReleaseDateFromStruct(fieldValue, "", releaseDate)
-			if version != unknownValue {
+			if version != UnknownValue {
 				versionString = fmt.Sprintf("%s (Released: %s)", version, releaseDate)
 			}
 		}
@@ -285,7 +284,7 @@ func extractVersionFromField(fieldValue reflect.Value) (version, versionString s
 		}
 	}
 
-	return unknownValue, unknownValue
+	return UnknownValue, UnknownValue
 }
 
 // extractManufacturerFromField extracts manufacturer from a struct field
@@ -372,7 +371,7 @@ func getFirmwareInventoryCollectionHandler(d devices.Feature, l logger.Interface
 
 		// Set ETag header for HTTP caching
 		c.Header("ETag", collection.ODataEtag)
-		c.Header("Cache-Control", "max-age=300") // Cache for 5 minutes
+		c.Header("Cache-Control", CacheMaxAge5Min) // Cache for 5 minutes
 
 		c.JSON(http.StatusOK, collection)
 	}
@@ -399,9 +398,9 @@ func buildFirmwareCollection(d devices.Feature, l logger.Interface, c *gin.Conte
 
 	// Build firmware inventory collection from AMT version data
 	collection := FirmwareInventoryCollection{
-		ODataContext: "/redfish/v1/$metadata#SoftwareInventoryCollection.SoftwareInventoryCollection",
+		ODataContext: ODataContextSoftwareInventoryCollection,
 		ODataID:      "/redfish/v1/Systems/" + systemID + "/FirmwareInventory",
-		ODataType:    "#SoftwareInventoryCollection.SoftwareInventoryCollection",
+		ODataType:    SchemaSoftwareInventoryCollection,
 		ID:           "FirmwareInventory",
 		Name:         "Firmware Inventory Collection",
 		Description:  "Collection of firmware inventory for this system",
@@ -571,7 +570,7 @@ func sendFirmwareResponse(c *gin.Context, firmware *FirmwareInventory) {
 		c.Header("ETag", firmware.ODataEtag)
 	}
 
-	c.Header("Cache-Control", "max-age=300") // Cache for 5 minutes
+	c.Header("Cache-Control", CacheMaxAge5Min) // Cache for 5 minutes
 
 	c.JSON(http.StatusOK, firmware)
 }
@@ -589,22 +588,22 @@ func createAMTFirmware(systemID string, versionInfo interface{}) *FirmwareInvent
 	}
 
 	return &FirmwareInventory{
-		ODataContext:  "/redfish/v1/$metadata#SoftwareInventory.SoftwareInventory",
+		ODataContext:  ODataContextSoftwareInventory,
 		ODataID:       "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/AMT",
-		ODataType:     "#SoftwareInventory.v1_3_0.SoftwareInventory",
+		ODataType:     SchemaSoftwareInventory,
 		ODataEtag:     generateETag(fmt.Sprintf("AMT-%s-%s", systemID, amt)),
 		ID:            "AMT",
 		Name:          "Intel Active Management Technology",
 		Description:   "Intel AMT Firmware",
 		Version:       amt,
 		VersionString: amt,
-		Manufacturer:  "Intel Corporation",
+		Manufacturer:  ServiceVendor,
 		ReleaseDate:   time.Now().UTC().Format("2006-01-02"), // Current date as placeholder
 		SoftwareID:    "AMT-" + systemID,
 		Updateable:    false, // AMT firmware updates typically require special procedures
 		Status: Status{
 			State:  "Enabled",
-			Health: "OK",
+			Health: TaskStatusOK,
 		},
 		Oem: createAMTOemSection(versionInfo, systemID),
 	}
@@ -623,22 +622,22 @@ func createFlashFirmware(systemID string, versionInfo interface{}) *FirmwareInve
 	}
 
 	return &FirmwareInventory{
-		ODataContext:  "/redfish/v1/$metadata#SoftwareInventory.SoftwareInventory",
+		ODataContext:  ODataContextSoftwareInventory,
 		ODataID:       "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/Flash",
-		ODataType:     "#SoftwareInventory.v1_3_0.SoftwareInventory",
+		ODataType:     SchemaSoftwareInventory,
 		ODataEtag:     generateETag(fmt.Sprintf("Flash-%s-%s", systemID, flash)),
 		ID:            "Flash",
 		Name:          "AMT Flash Firmware",
 		Description:   "AMT Flash Memory Firmware",
 		Version:       flash,
 		VersionString: flash,
-		Manufacturer:  "Intel Corporation",
+		Manufacturer:  ServiceVendor,
 		ReleaseDate:   time.Now().UTC().Format("2006-01-02"),
 		SoftwareID:    "Flash-" + systemID,
 		Updateable:    false,
 		Status: Status{
 			State:  "Enabled",
-			Health: "OK",
+			Health: TaskStatusOK,
 		},
 		Oem: map[string]interface{}{
 			"Intel": map[string]interface{}{
@@ -664,22 +663,22 @@ func createNetstackFirmware(systemID string, versionInfo interface{}) *FirmwareI
 	}
 
 	return &FirmwareInventory{
-		ODataContext:  "/redfish/v1/$metadata#SoftwareInventory.SoftwareInventory",
+		ODataContext:  ODataContextSoftwareInventory,
 		ODataID:       "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/Netstack",
-		ODataType:     "#SoftwareInventory.v1_3_0.SoftwareInventory",
+		ODataType:     SchemaSoftwareInventory,
 		ODataEtag:     generateETag(fmt.Sprintf("Netstack-%s-%s", systemID, netstack)),
 		ID:            "Netstack",
 		Name:          "AMT Network Stack",
 		Description:   "AMT Network Stack Firmware",
 		Version:       netstack,
 		VersionString: netstack,
-		Manufacturer:  "Intel Corporation",
+		Manufacturer:  ServiceVendor,
 		ReleaseDate:   time.Now().UTC().Format("2006-01-02"),
 		SoftwareID:    "Netstack-" + systemID,
 		Updateable:    false,
 		Status: Status{
 			State:  "Enabled",
-			Health: "OK",
+			Health: TaskStatusOK,
 		},
 		Oem: map[string]interface{}{
 			"Intel": map[string]interface{}{
@@ -705,22 +704,22 @@ func createAMTAppsFirmware(systemID string, versionInfo interface{}) *FirmwareIn
 	}
 
 	return &FirmwareInventory{
-		ODataContext:  "/redfish/v1/$metadata#SoftwareInventory.SoftwareInventory",
+		ODataContext:  ODataContextSoftwareInventory,
 		ODataID:       "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/AMTApps",
-		ODataType:     "#SoftwareInventory.v1_3_0.SoftwareInventory",
+		ODataType:     SchemaSoftwareInventory,
 		ODataEtag:     generateETag(fmt.Sprintf("AMTApps-%s-%s", systemID, amtApps)),
 		ID:            "AMTApps",
 		Name:          "AMT Applications",
 		Description:   "AMT Applications Firmware",
 		Version:       amtApps,
 		VersionString: amtApps,
-		Manufacturer:  "Intel Corporation",
+		Manufacturer:  ServiceVendor,
 		ReleaseDate:   time.Now().UTC().Format("2006-01-02"),
 		SoftwareID:    "AMTApps-" + systemID,
 		Updateable:    false,
 		Status: Status{
 			State:  "Enabled",
-			Health: "OK",
+			Health: TaskStatusOK,
 		},
 		Oem: map[string]interface{}{
 			"Intel": map[string]interface{}{
@@ -750,9 +749,9 @@ func createBIOSFirmware(systemID string, hwInfo interface{}, l logger.Interface)
 	l.Info("BIOS case: parsed version=%s, manufacturer=%s, releaseDate=%s", version, manufacturer, releaseDate)
 
 	return &FirmwareInventory{
-		ODataContext:  "/redfish/v1/$metadata#SoftwareInventory.SoftwareInventory",
+		ODataContext:  ODataContextSoftwareInventory,
 		ODataID:       "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/BIOS",
-		ODataType:     "#SoftwareInventory.v1_3_0.SoftwareInventory",
+		ODataType:     SchemaSoftwareInventory,
 		ODataEtag:     generateETag(fmt.Sprintf("BIOS-%s-%s", systemID, version)),
 		ID:            "BIOS",
 		Name:          "System BIOS/UEFI",
@@ -765,7 +764,7 @@ func createBIOSFirmware(systemID string, hwInfo interface{}, l logger.Interface)
 		Updateable:    false, // BIOS updates typically require special procedures
 		Status: Status{
 			State:  "Enabled",
-			Health: "OK",
+			Health: TaskStatusOK,
 		},
 		Oem: map[string]interface{}{
 			"Intel": map[string]interface{}{
