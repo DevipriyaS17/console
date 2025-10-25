@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 
 	"github.com/device-management-toolkit/console/config"
 	"github.com/device-management-toolkit/console/pkg/logger"
@@ -110,8 +111,8 @@ func serviceRootHandler(c *gin.Context) {
 
 	// Validate Accept header (406 Not Acceptable)
 	acceptHeader := c.GetHeader(HeaderAccept)
-	if acceptHeader != "" && acceptHeader != MediaTypeWildcard && acceptHeader != MediaTypeJSON &&
-		!strings.Contains(acceptHeader, MediaTypeJSON) && !strings.Contains(acceptHeader, MediaTypeWildcard) {
+	if acceptHeader != "" && acceptHeader != MediaTypeWildcard && acceptHeader != binding.MIMEJSON &&
+		!strings.Contains(acceptHeader, binding.MIMEJSON) && !strings.Contains(acceptHeader, MediaTypeWildcard) {
 		NotAcceptableError(c, acceptHeader)
 
 		return
@@ -194,32 +195,32 @@ func serviceRootHandler(c *gin.Context) {
 // registerServiceRootMethodHandlers registers unsupported method handlers for ServiceRoot
 func registerServiceRootMethodHandlers(r *gin.RouterGroup) {
 	r.POST("/", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPOST, "ServiceRoot", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPost, "ServiceRoot", http.MethodGet)
 	})
 	r.PUT("/", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPUT, "ServiceRoot", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPut, "ServiceRoot", http.MethodGet)
 	})
 	r.PATCH("/", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPATCH, "ServiceRoot", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPatch, "ServiceRoot", http.MethodGet)
 	})
 	r.DELETE("/", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodDELETE, "ServiceRoot", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodDelete, "ServiceRoot", http.MethodGet)
 	})
 }
 
 // registerSystemsMethodHandlers registers unsupported method handlers for Systems collection
 func registerSystemsMethodHandlers(r *gin.RouterGroup) {
 	r.POST("/Systems", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPOST, "ComputerSystemCollection", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPost, "ComputerSystemCollection", http.MethodGet)
 	})
 	r.PUT("/Systems", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPUT, "ComputerSystemCollection", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPut, "ComputerSystemCollection", http.MethodGet)
 	})
 	r.PATCH("/Systems", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPATCH, "ComputerSystemCollection", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPatch, "ComputerSystemCollection", http.MethodGet)
 	})
 	r.DELETE("/Systems", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodDELETE, "ComputerSystemCollection", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodDelete, "ComputerSystemCollection", http.MethodGet)
 	})
 }
 
@@ -230,16 +231,16 @@ func registerSessionServiceRoutes(r *gin.RouterGroup) {
 
 	// Handle unsupported methods on SessionService with proper 405 responses
 	r.POST("/SessionService", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "POST", "SessionService", "GET")
+		HTTPMethodNotAllowedError(c, http.MethodPost, "SessionService", http.MethodGet)
 	})
 	r.PUT("/SessionService", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PUT", "SessionService", "GET")
+		HTTPMethodNotAllowedError(c, http.MethodPut, "SessionService", http.MethodGet)
 	})
 	r.PATCH("/SessionService", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "PATCH", "SessionService", "GET")
+		HTTPMethodNotAllowedError(c, http.MethodPatch, "SessionService", http.MethodGet)
 	})
 	r.DELETE("/SessionService", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, "DELETE", "SessionService", "GET")
+		HTTPMethodNotAllowedError(c, http.MethodDelete, "SessionService", http.MethodGet)
 	})
 
 	// Sessions collection endpoint (read-only, empty list for now)

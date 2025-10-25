@@ -78,30 +78,30 @@ func NewFirmwareRoutes(systems *gin.RouterGroup, d devices.Feature, l logger.Int
 
 	// Register method-not-allowed handlers for FirmwareInventory collection
 	systems.POST(":id/FirmwareInventory", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPOST, "SoftwareInventoryCollection", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPost, "SoftwareInventoryCollection", http.MethodGet)
 	})
 	systems.PUT(":id/FirmwareInventory", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPUT, "SoftwareInventoryCollection", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPut, "SoftwareInventoryCollection", http.MethodGet)
 	})
 	systems.PATCH(":id/FirmwareInventory", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPATCH, "SoftwareInventoryCollection", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPatch, "SoftwareInventoryCollection", http.MethodGet)
 	})
 	systems.DELETE(":id/FirmwareInventory", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodDELETE, "SoftwareInventoryCollection", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodDelete, "SoftwareInventoryCollection", http.MethodGet)
 	})
 
 	// Register method-not-allowed handlers for FirmwareInventory instances
 	systems.POST(":id/FirmwareInventory/:firmwareId", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPOST, "SoftwareInventory", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPost, "SoftwareInventory", http.MethodGet)
 	})
 	systems.PUT(":id/FirmwareInventory/:firmwareId", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPUT, "SoftwareInventory", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPut, "SoftwareInventory", http.MethodGet)
 	})
 	systems.PATCH(":id/FirmwareInventory/:firmwareId", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodPATCH, "SoftwareInventory", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodPatch, "SoftwareInventory", http.MethodGet)
 	})
 	systems.DELETE(":id/FirmwareInventory/:firmwareId", func(c *gin.Context) {
-		HTTPMethodNotAllowedError(c, MethodDELETE, "SoftwareInventory", MethodGET)
+		HTTPMethodNotAllowedError(c, http.MethodDelete, "SoftwareInventory", http.MethodGet)
 	})
 
 	l.Info("Registered Redfish FirmwareInventory routes under %s", systems.BasePath())
@@ -399,7 +399,7 @@ func buildFirmwareCollection(d devices.Feature, l logger.Interface, c *gin.Conte
 	// Build firmware inventory collection from AMT version data
 	collection := FirmwareInventoryCollection{
 		ODataContext: ODataContextSoftwareInventoryCollection,
-		ODataID:      "/redfish/v1/Systems/" + systemID + "/FirmwareInventory",
+		ODataID:      BuildSystemFirmwarePath(systemID),
 		ODataType:    SchemaSoftwareInventoryCollection,
 		ID:           "FirmwareInventory",
 		Name:         "Firmware Inventory Collection",
@@ -442,25 +442,25 @@ func addFirmwareMembers(collection *FirmwareInventoryCollection, systemID string
 	// Add AMT firmware components as inventory items
 	if amt := getStringField(v, "AMT"); amt != "" {
 		collection.Members = append(collection.Members, FirmwareInventoryMember{
-			ODataID: "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/AMT",
+			ODataID: BuildSystemFirmwareItemPath(systemID, "AMT"),
 		})
 	}
 
 	if flash := getStringField(v, "Flash"); flash != "" {
 		collection.Members = append(collection.Members, FirmwareInventoryMember{
-			ODataID: "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/Flash",
+			ODataID: BuildSystemFirmwareItemPath(systemID, "Flash"),
 		})
 	}
 
 	if netstack := getStringField(v, "Netstack"); netstack != "" {
 		collection.Members = append(collection.Members, FirmwareInventoryMember{
-			ODataID: "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/Netstack",
+			ODataID: BuildSystemFirmwareItemPath(systemID, "Netstack"),
 		})
 	}
 
 	if amtApps := getStringField(v, "AMTApps"); amtApps != "" {
 		collection.Members = append(collection.Members, FirmwareInventoryMember{
-			ODataID: "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/AMTApps",
+			ODataID: BuildSystemFirmwareItemPath(systemID, "AMTApps"),
 		})
 	}
 }
@@ -478,7 +478,7 @@ func getStringField(v reflect.Value, fieldName string) string {
 // addBIOSMember adds BIOS firmware member to the collection
 func addBIOSMember(collection *FirmwareInventoryCollection, systemID string) {
 	collection.Members = append(collection.Members, FirmwareInventoryMember{
-		ODataID: "/redfish/v1/Systems/" + systemID + "/FirmwareInventory/BIOS",
+		ODataID: BuildSystemFirmwareItemPath(systemID, "BIOS"),
 	})
 }
 

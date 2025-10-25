@@ -71,10 +71,10 @@ func NewSystemsRoutes(r *gin.RouterGroup, d devices.Feature, cfg *config.Config,
 
 	// ComputerSystem.Reset Action - only POST is allowed
 	systems.POST(":id/Actions/ComputerSystem.Reset", postSystemResetHandler(d, l))
-	systems.GET(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
-	systems.PUT(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
-	systems.PATCH(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
-	systems.DELETE(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler("ComputerSystem.Reset", "POST"))
+	systems.GET(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler())
+	systems.PUT(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler())
+	systems.PATCH(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler())
+	systems.DELETE(":id/Actions/ComputerSystem.Reset", methodNotAllowedHandler())
 
 	// Add firmware inventory routes
 	NewFirmwareRoutes(systems, d, l)
@@ -108,13 +108,13 @@ func getSystemsCollectionHandler(d devices.Feature, l logger.Interface) gin.Hand
 			}
 
 			members = append(members, map[string]any{
-				"@odata.id": "/redfish/v1/Systems/" + it.GUID,
+				"@odata.id": PathSystemInstance + it.GUID,
 			})
 		}
 
 		payload := map[string]any{
-			"@odata.type":         "#ComputerSystemCollection.ComputerSystemCollection",
-			"@odata.id":           "/redfish/v1/Systems",
+			"@odata.type":         SchemaComputerSystemCollection,
+			"@odata.id":           PathSystems,
 			"Name":                "Computer System Collection",
 			"Members@odata.count": len(members),
 			"Members":             members,
@@ -144,14 +144,14 @@ func getSystemInstanceHandler(d devices.Feature, l logger.Interface) gin.Handler
 		}
 
 		payload := map[string]any{
-			"@odata.type": "#ComputerSystem.v1_0_0.ComputerSystem",
-			"@odata.id":   "/redfish/v1/Systems/" + id,
+			"@odata.type": SchemaComputerSystem,
+			"@odata.id":   PathSystemInstance + id,
 			"Id":          id,
 			"Name":        "Computer System " + id,
 			"PowerState":  powerState,
 			"Actions": map[string]any{
 				"#ComputerSystem.Reset": map[string]any{
-					"target":                            "/redfish/v1/Systems/" + id + "/Actions/ComputerSystem.Reset",
+					"target":                            PathSystemInstance + id + PathSystemActions,
 					"ResetType@Redfish.AllowableValues": []string{resetTypeOn, resetTypeForceOff, resetTypeForceRestart, resetTypePowerCycle},
 				},
 			},
@@ -160,10 +160,10 @@ func getSystemInstanceHandler(d devices.Feature, l logger.Interface) gin.Handler
 	}
 }
 
-// methodNotAllowedHandler returns a handler that responds with 405 Method Not Allowed for Redfish actions
-func methodNotAllowedHandler(action, allowedMethods string) gin.HandlerFunc {
+// methodNotAllowedHandler returns a handler that responds with 405 Method Not Allowed for ComputerSystem.Reset action
+func methodNotAllowedHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		MethodNotAllowedError(c, action, allowedMethods)
+		MethodNotAllowedError(c, "ComputerSystem.Reset", http.MethodPost)
 	}
 }
 
@@ -268,9 +268,9 @@ func generateTaskResponse(c *gin.Context, res power.PowerActionResponse) {
 
 	// Return Redfish-compliant Task response
 	taskResponse := map[string]any{
-		"@odata.context": "/redfish/v1/$metadata#Task.Task",
-		"@odata.id":      "/redfish/v1/TaskService/Tasks/" + taskID,
-		"@odata.type":    "#Task.v1_6_0.Task",
+		"@odata.context": ODataContextTask,
+		"@odata.id":      PathTaskService + "/" + taskID,
+		"@odata.type":    SchemaTask,
 		"Id":             taskID,
 		"Name":           "System Reset Task",
 		"TaskState":      taskState,

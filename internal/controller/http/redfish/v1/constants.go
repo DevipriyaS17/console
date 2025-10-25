@@ -63,15 +63,6 @@ const (
 	HeaderAccept      = "Accept"
 )
 
-// HTTP Methods
-const (
-	MethodGET    = "GET"
-	MethodPOST   = "POST"
-	MethodPUT    = "PUT"
-	MethodPATCH  = "PATCH"
-	MethodDELETE = "DELETE"
-)
-
 // Redfish Service Information
 const (
 	RedfishVersion     = "1.11.0"
@@ -98,23 +89,42 @@ const (
 // Common Redfish API Paths - used across multiple files
 const (
 	PathRedfishRoot            = "/redfish/v1/"
-	PathSystems                = "/redfish/v1/Systems"
-	PathSessionService         = "/redfish/v1/SessionService"
-	PathSessionServiceSessions = "/redfish/v1/SessionService/Sessions"
-	PathTaskService            = "/redfish/v1/TaskService/Tasks/"
-	PathMetadata               = "/redfish/v1/$metadata"
+	PathSystems                = PathRedfishRoot + "Systems"
+	PathSessionService         = PathRedfishRoot + "SessionService"
+	PathSessionServiceSessions = PathSessionService + "/Sessions"
+	PathTaskService            = PathRedfishRoot + "TaskService/Tasks"
+	PathMetadata               = PathRedfishRoot + "$metadata"
 )
+
+// Common Redfish API Path patterns - for building dynamic paths
+const (
+	// System-specific paths
+	PathSystemInstance     = PathSystems + "/"               // /redfish/v1/Systems/
+	PathSystemActions      = "/Actions/ComputerSystem.Reset" // Appended to system instance
+	PathSystemFirmware     = "/FirmwareInventory"            // Appended to system instance
+	PathSystemFirmwareItem = PathSystemFirmware + "/"        // /FirmwareInventory/
+)
+
+// BuildSystemPath builds a path to a specific system: /redfish/v1/Systems/{systemID}
+func BuildSystemPath(systemID string) string {
+	return PathSystemInstance + systemID
+}
+
+// BuildSystemFirmwarePath builds a path to system firmware inventory: /redfish/v1/Systems/{systemID}/FirmwareInventory
+func BuildSystemFirmwarePath(systemID string) string {
+	return PathSystemInstance + systemID + PathSystemFirmware
+}
+
+// BuildSystemFirmwareItemPath builds a path to a specific firmware item: /redfish/v1/Systems/{systemID}/FirmwareInventory/{itemID}
+func BuildSystemFirmwareItemPath(systemID, itemID string) string {
+	return PathSystemInstance + systemID + PathSystemFirmwareItem + itemID
+}
 
 // OData Context paths for metadata
 const (
-	ODataContextTask                        = "/redfish/v1/$metadata#Task.Task"
-	ODataContextSoftwareInventory           = "/redfish/v1/$metadata#SoftwareInventory.SoftwareInventory"
-	ODataContextSoftwareInventoryCollection = "/redfish/v1/$metadata#SoftwareInventoryCollection.SoftwareInventoryCollection"
-)
-
-// Media Type constants
-const (
-	MediaTypeJSON = "application/json"
+	ODataContextTask                        = PathMetadata + "#Task.Task"
+	ODataContextSoftwareInventory           = PathMetadata + "#SoftwareInventory.SoftwareInventory"
+	ODataContextSoftwareInventoryCollection = PathMetadata + "#SoftwareInventoryCollection.SoftwareInventoryCollection"
 )
 
 // Cache control values
