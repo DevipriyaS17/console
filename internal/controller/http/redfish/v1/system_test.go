@@ -22,6 +22,7 @@ import (
 
 	"github.com/device-management-toolkit/go-wsman-messages/v2/pkg/wsman/cim/power"
 
+	"github.com/device-management-toolkit/console/config"
 	dto "github.com/device-management-toolkit/console/internal/entity/dto/v1"
 	dtov2 "github.com/device-management-toolkit/console/internal/entity/dto/v2"
 	"github.com/device-management-toolkit/console/internal/mocks"
@@ -30,9 +31,9 @@ import (
 const (
 	testSystemGUID     = "test-system-guid-123"
 	testInvalidGUID    = "invalid-system-guid"
-	systemsBasePath    = "/redfish/v1/Systems"
-	systemsInstanceURL = systemsBasePath + "/" + testSystemGUID
-	resetActionURL     = systemsInstanceURL + "/Actions/ComputerSystem.Reset"
+	systemsBasePath    = PathSystems
+	systemsInstanceURL = PathSystemInstance + testSystemGUID
+	resetActionURL     = systemsInstanceURL + PathSystemActions
 )
 
 func TestNewSystemsRoutes(t *testing.T) {
@@ -46,6 +47,7 @@ func TestNewSystemsRoutes(t *testing.T) {
 
 		mockFeature := mocks.NewMockDeviceManagementFeature(ctrl)
 		mockLogger := mocks.NewMockLogger(ctrl)
+		mockConfig := &config.Config{}
 
 		// Expect logging calls for route registration
 		mockLogger.EXPECT().Info(gomock.Any(), gomock.Any()).Times(2) // Systems + Firmware routes
@@ -55,7 +57,7 @@ func TestNewSystemsRoutes(t *testing.T) {
 
 		// Test route registration
 		redfishGroup := router.Group("/redfish/v1")
-		NewSystemsRoutes(redfishGroup, mockFeature, mockLogger)
+		NewSystemsRoutes(redfishGroup, mockFeature, mockConfig, mockLogger)
 
 		// Verify routes exist by testing them
 		routes := router.Routes()
@@ -91,7 +93,7 @@ func TestNewSystemsRoutes(t *testing.T) {
 		// This will panic due to firmware routes accessing nil logger
 		// Testing that routes can be set up, but will fail on actual usage
 		require.Panics(t, func() {
-			NewSystemsRoutes(redfishGroup, nil, nil)
+			NewSystemsRoutes(redfishGroup, nil, nil, nil)
 		})
 	})
 }
@@ -218,7 +220,7 @@ func TestGetSystemsCollectionHandler(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			validateResponse: func(t *testing.T, body string) {
 				t.Helper()
-				assert.Contains(t, body, "backend connection failed")
+				assert.Contains(t, body, "GeneralError")
 			},
 		},
 	}
@@ -456,6 +458,11 @@ func TestPostSystemResetHandler(t *testing.T) {
 			systemID:    testSystemGUID,
 			requestBody: `{"ResetType": "On"}`,
 			setupMocks: func(mockFeature *mocks.MockDeviceManagementFeature, mockLogger *mocks.MockLogger) {
+				// Mock GetPowerState call (for conflict checking)
+				mockFeature.EXPECT().
+					GetPowerState(gomock.Any(), testSystemGUID).
+					Return(dto.PowerState{PowerState: 8}, nil) // Power off state
+
 				expectedResult := power.PowerActionResponse{
 					ReturnValue: power.ReturnValue(0),
 				}
@@ -468,7 +475,8 @@ func TestPostSystemResetHandler(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, body string) {
 				t.Helper()
-				assert.Contains(t, body, "ReturnValue")
+				assert.Contains(t, body, "TaskState")
+				assert.Contains(t, body, "Completed")
 			},
 		},
 		{
@@ -476,6 +484,11 @@ func TestPostSystemResetHandler(t *testing.T) {
 			systemID:    testSystemGUID,
 			requestBody: `{"ResetType": "ForceOff"}`,
 			setupMocks: func(mockFeature *mocks.MockDeviceManagementFeature, _ *mocks.MockLogger) {
+				// Mock GetPowerState call (for conflict checking)
+				mockFeature.EXPECT().
+					GetPowerState(gomock.Any(), testSystemGUID).
+					Return(dto.PowerState{PowerState: 2}, nil) // Power on state
+
 				expectedResult := power.PowerActionResponse{
 					ReturnValue: power.ReturnValue(0),
 				}
@@ -486,7 +499,8 @@ func TestPostSystemResetHandler(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, body string) {
 				t.Helper()
-				assert.Contains(t, body, "ReturnValue")
+				assert.Contains(t, body, "TaskState")
+				assert.Contains(t, body, "Completed")
 			},
 		},
 		{
@@ -494,6 +508,11 @@ func TestPostSystemResetHandler(t *testing.T) {
 			systemID:    testSystemGUID,
 			requestBody: `{"ResetType": "ForceRestart"}`,
 			setupMocks: func(mockFeature *mocks.MockDeviceManagementFeature, _ *mocks.MockLogger) {
+				// Mock GetPowerState call (for conflict checking)
+				mockFeature.EXPECT().
+					GetPowerState(gomock.Any(), testSystemGUID).
+					Return(dto.PowerState{PowerState: 2}, nil) // Power on state
+
 				expectedResult := power.PowerActionResponse{
 					ReturnValue: power.ReturnValue(0),
 				}
@@ -504,7 +523,8 @@ func TestPostSystemResetHandler(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, body string) {
 				t.Helper()
-				assert.Contains(t, body, "ReturnValue")
+				assert.Contains(t, body, "TaskState")
+				assert.Contains(t, body, "Completed")
 			},
 		},
 		{
@@ -512,6 +532,11 @@ func TestPostSystemResetHandler(t *testing.T) {
 			systemID:    testSystemGUID,
 			requestBody: `{"ResetType": "PowerCycle"}`,
 			setupMocks: func(mockFeature *mocks.MockDeviceManagementFeature, _ *mocks.MockLogger) {
+				// Mock GetPowerState call (for conflict checking)
+				mockFeature.EXPECT().
+					GetPowerState(gomock.Any(), testSystemGUID).
+					Return(dto.PowerState{PowerState: 2}, nil) // Power on state
+
 				expectedResult := power.PowerActionResponse{
 					ReturnValue: power.ReturnValue(0),
 				}
@@ -522,7 +547,8 @@ func TestPostSystemResetHandler(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, body string) {
 				t.Helper()
-				assert.Contains(t, body, "ReturnValue")
+				assert.Contains(t, body, "TaskState")
+				assert.Contains(t, body, "Completed")
 			},
 		},
 		{
@@ -535,7 +561,7 @@ func TestPostSystemResetHandler(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			validateResponse: func(t *testing.T, body string) {
 				t.Helper()
-				assert.Contains(t, body, "unsupported ResetType")
+				assert.Contains(t, body, "PropertyValueNotInList")
 			},
 		},
 		{
@@ -561,7 +587,7 @@ func TestPostSystemResetHandler(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			validateResponse: func(t *testing.T, body string) {
 				t.Helper()
-				assert.Contains(t, body, "unsupported ResetType")
+				assert.Contains(t, body, "PropertyMissing")
 			},
 		},
 		{
@@ -569,16 +595,21 @@ func TestPostSystemResetHandler(t *testing.T) {
 			systemID:    testSystemGUID,
 			requestBody: `{"ResetType": "On"}`,
 			setupMocks: func(mockFeature *mocks.MockDeviceManagementFeature, mockLogger *mocks.MockLogger) {
+				// Mock GetPowerState call (for conflict checking)
+				mockFeature.EXPECT().
+					GetPowerState(gomock.Any(), testSystemGUID).
+					Return(dto.PowerState{PowerState: 8}, nil) // Power off state
+
 				mockFeature.EXPECT().
 					SendPowerAction(gomock.Any(), testSystemGUID, actionPowerUp).
 					Return(power.PowerActionResponse{}, fmt.Errorf("system not found"))
 
 				mockLogger.EXPECT().Error(gomock.Any(), gomock.Any()).Times(1)
 			},
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusNotFound,
 			validateResponse: func(t *testing.T, body string) {
 				t.Helper()
-				assert.Contains(t, body, "system not found")
+				assert.Contains(t, body, "ResourceNotFound")
 			},
 		},
 	}
@@ -748,6 +779,23 @@ func TestResetTypeMapping(t *testing.T) {
 			mockFeature := mocks.NewMockDeviceManagementFeature(ctrl)
 			mockLogger := mocks.NewMockLogger(ctrl)
 
+			// Mock GetPowerState call (for conflict checking)
+			// Use power state that won't conflict with the specific action being tested
+			var powerState int
+
+			switch tt.expectedCIMAction {
+			case actionPowerUp: // 2 - if testing PowerUp, mock as powered off
+				powerState = 8 // Power off
+			case actionPowerDown: // 8 - if testing PowerDown, mock as powered on
+				powerState = 2 // Power on
+			default: // For other actions, use power on state
+				powerState = 2 // Power on
+			}
+
+			mockFeature.EXPECT().
+				GetPowerState(gomock.Any(), testSystemGUID).
+				Return(dto.PowerState{PowerState: powerState}, nil)
+
 			expectedResult := power.PowerActionResponse{
 				ReturnValue: power.ReturnValue(0),
 			}
@@ -813,7 +861,10 @@ func TestSystemsIntegrationWithFirmware(t *testing.T) {
 
 		// Setup complete systems routes including firmware
 		redfishGroup := router.Group("/redfish/v1")
-		NewSystemsRoutes(redfishGroup, mockFeature, mockLogger)
+		mockConfig := &config.Config{
+			Auth: config.Auth{Disabled: true}, // Disable auth for testing
+		}
+		NewSystemsRoutes(redfishGroup, mockFeature, mockConfig, mockLogger)
 
 		// Test that firmware inventory endpoint is accessible via systems routes
 		w := httptest.NewRecorder()
@@ -823,6 +874,7 @@ func TestSystemsIntegrationWithFirmware(t *testing.T) {
 			"/redfish/v1/Systems/"+testSystemGUID+"/FirmwareInventory",
 			http.NoBody,
 		)
+		req.Header.Set("Accept", "application/json")
 
 		router.ServeHTTP(w, req)
 
@@ -835,52 +887,6 @@ func TestSystemsIntegrationWithFirmware(t *testing.T) {
 
 		assert.Equal(t, "#SoftwareInventoryCollection.SoftwareInventoryCollection", collection["@odata.type"])
 		assert.Equal(t, "/redfish/v1/Systems/"+testSystemGUID+"/FirmwareInventory", collection["@odata.id"])
-	})
-}
-
-func TestConstants(t *testing.T) {
-	t.Parallel()
-
-	t.Run("power state constants", func(t *testing.T) {
-		t.Parallel()
-
-		assert.Equal(t, "Unknown", powerStateUnknown)
-		assert.Equal(t, "On", powerStateOn)
-		assert.Equal(t, "Off", powerStateOff)
-	})
-
-	t.Run("reset type constants", func(t *testing.T) {
-		t.Parallel()
-
-		assert.Equal(t, "On", resetTypeOn)
-		assert.Equal(t, "ForceOff", resetTypeForceOff)
-		assert.Equal(t, "ForceRestart", resetTypeForceRestart)
-		assert.Equal(t, "PowerCycle", resetTypePowerCycle)
-	})
-
-	t.Run("action constants", func(t *testing.T) {
-		t.Parallel()
-
-		assert.Equal(t, 2, actionPowerUp)
-		assert.Equal(t, 5, actionPowerCycle)
-		assert.Equal(t, 8, actionPowerDown)
-		assert.Equal(t, 10, actionReset)
-	})
-
-	t.Run("CIM power state constants", func(t *testing.T) {
-		t.Parallel()
-
-		assert.Equal(t, 2, cimPowerOn)
-		assert.Equal(t, 3, cimPowerSleep)
-		assert.Equal(t, 4, cimPowerStandby)
-		assert.Equal(t, 7, cimPowerSoftOff)
-		assert.Equal(t, 8, cimPowerHardOff)
-	})
-
-	t.Run("limits constants", func(t *testing.T) {
-		t.Parallel()
-
-		assert.Equal(t, 100, maxSystemsList)
 	})
 }
 

@@ -17,21 +17,6 @@ import (
 	"github.com/device-management-toolkit/console/config"
 )
 
-// Redfish Base Message Registry v1.11.0 Message IDs
-const (
-	BaseSuccessMessageID         = "Base.1.11.0.Success"
-	BaseErrorMessageID           = "Base.1.11.0.GeneralError"
-	BaseMalformedJSONID          = "Base.1.11.0.MalformedJSON"
-	BasePropertyMissingID        = "Base.1.11.0.PropertyMissing"
-	BasePropertyValueNotInListID = "Base.1.11.0.PropertyValueNotInList"
-	BaseResourceNotFoundID       = "Base.1.11.0.ResourceNotFound"
-	BaseOperationNotAllowedID    = "Base.1.11.0.OperationNotAllowed"
-	BaseActionNotSupportedID     = "Base.1.11.0.ActionNotSupported"
-	BaseNoValidSessionID         = "Base.1.11.0.NoValidSession"
-	BaseInsufficientPrivilegeID  = "Base.1.11.0.InsufficientPrivilege"
-	BaseNotAcceptableID          = "Base.1.11.0.NotAcceptable"
-)
-
 // redfishError creates a standard Redfish error response structure
 func redfishError(messageID, message, severity, resolution string, messageArgs []string) map[string]any {
 	extendedInfo := map[string]any{
@@ -57,11 +42,11 @@ func redfishError(messageID, message, severity, resolution string, messageArgs [
 
 // SetRedfishHeaders sets standard Redfish-compliant HTTP headers
 func SetRedfishHeaders(c *gin.Context) {
-	c.Header("Content-Type", "application/json; charset=utf-8")
-	c.Header("OData-Version", "4.0")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("X-Frame-Options", "DENY")
-	c.Header("Content-Security-Policy", "default-src 'self'")
+	c.Header(ContentTypeHeaderName, ContentTypeJSON)
+	c.Header(ODataVersionHeader, ODataVersionValue)
+	c.Header(CacheControlHeader, CacheControlValue)
+	c.Header(XFrameOptionsHeader, XFrameOptionsValue)
+	c.Header(CSPHeader, CSPValue)
 }
 
 // redfishErrorResponse sends a Redfish error response with proper headers
@@ -75,7 +60,7 @@ func MalformedJSONError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusBadRequest,
 		BaseMalformedJSONID,
 		"The request body submitted was malformed JSON and could not be parsed by the receiving service.",
-		"Critical",
+		TaskStatusCritical,
 		"Ensure that the request body is valid JSON and resubmit the request.",
 		nil)
 }
@@ -85,7 +70,7 @@ func PropertyMissingError(c *gin.Context, propertyName string) {
 	redfishErrorResponse(c, http.StatusBadRequest,
 		BasePropertyMissingID,
 		fmt.Sprintf("The property %s is a required property and must be included in the request.", propertyName),
-		"Warning",
+		TaskStatusWarning,
 		"Ensure that the property is in the request body and has a valid value and resubmit the request.",
 		[]string{propertyName})
 }
@@ -95,7 +80,7 @@ func PropertyValueNotInListError(c *gin.Context, value, propertyName string) {
 	redfishErrorResponse(c, http.StatusBadRequest,
 		BasePropertyValueNotInListID,
 		fmt.Sprintf("The value '%s' for the property %s is not in the list of acceptable values.", value, propertyName),
-		"Warning",
+		TaskStatusWarning,
 		"Choose a value from the enumeration list that the implementation can support and resubmit the request if the operation failed.",
 		[]string{value, propertyName})
 }
@@ -105,7 +90,7 @@ func ResourceNotFoundError(c *gin.Context, resourceType, resourceID string) {
 	redfishErrorResponse(c, http.StatusNotFound,
 		BaseResourceNotFoundID,
 		fmt.Sprintf("The requested resource of type %s named '%s' was not found.", resourceType, resourceID),
-		"Critical",
+		TaskStatusCritical,
 		"Provide a valid resource identifier and resubmit the request.",
 		[]string{resourceType, resourceID})
 }
@@ -115,7 +100,7 @@ func OperationNotAllowedError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusConflict,
 		BaseOperationNotAllowedID,
 		"The operation was not successful because the resource is in a state that does not allow this operation.",
-		"Critical",
+		TaskStatusCritical,
 		"The operation was not successful because the resource is in a state that does not allow this operation.",
 		nil)
 }
@@ -128,7 +113,7 @@ func MethodNotAllowedError(c *gin.Context, action, allowedMethods string) {
 	redfishErrorResponse(c, http.StatusMethodNotAllowed,
 		BaseActionNotSupportedID,
 		fmt.Sprintf("The action %s is not supported by the resource.", action),
-		"Critical",
+		TaskStatusCritical,
 		"The action supplied cannot be resubmitted to the implementation. Perhaps the action was invalid, the wrong resource was the target or the implementation documentation may be of assistance.",
 		[]string{action})
 }
@@ -141,7 +126,7 @@ func HTTPMethodNotAllowedError(c *gin.Context, method, resourceType, allowedMeth
 	redfishErrorResponse(c, http.StatusMethodNotAllowed,
 		BaseOperationNotAllowedID,
 		fmt.Sprintf("The HTTP method %s is not allowed on this resource.", method),
-		"Critical",
+		TaskStatusCritical,
 		fmt.Sprintf("The operation is not allowed. The %s method is not supported for %s resources. Use one of the allowed methods: %s.", method, resourceType, allowedMethods),
 		[]string{method, resourceType})
 }
@@ -151,7 +136,7 @@ func NoValidSessionError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusUnauthorized,
 		BaseNoValidSessionID,
 		"There is no valid session established with the implementation.",
-		"Critical",
+		TaskStatusCritical,
 		"Establish a valid session before attempting any operations.",
 		nil)
 }
@@ -161,7 +146,7 @@ func InsufficientPrivilegeError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusForbidden,
 		BaseInsufficientPrivilegeID,
 		"There are insufficient privileges for the account or credentials associated with the current session to perform the requested operation.",
-		"Critical",
+		TaskStatusCritical,
 		"Either abandon the operation or change the associated access rights and resubmit the request if the operation failed for authorization reasons.",
 		nil)
 }
@@ -171,7 +156,7 @@ func NotAcceptableError(c *gin.Context, requestedType string) {
 	redfishErrorResponse(c, http.StatusNotAcceptable,
 		BaseNotAcceptableID,
 		fmt.Sprintf("The requested media type '%s' is not acceptable. This service only supports 'application/json'.", requestedType),
-		"Warning",
+		TaskStatusWarning,
 		"Resubmit the request with a supported media type in the Accept header.",
 		[]string{requestedType})
 }
@@ -221,7 +206,7 @@ func GeneralError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusInternalServerError,
 		BaseErrorMessageID,
 		"A general error has occurred. See ExtendedInfo for more information.",
-		"Critical",
+		TaskStatusCritical,
 		"None.",
 		nil)
 }
@@ -231,7 +216,7 @@ func BadGatewayError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusBadGateway,
 		BaseErrorMessageID,
 		"The upstream service or managed device is unavailable or unreachable.",
-		"Critical",
+		TaskStatusCritical,
 		"Verify network connectivity to the managed device and ensure the device is powered on and accessible.",
 		nil)
 }
@@ -242,7 +227,7 @@ func ServiceUnavailableError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusBadGateway,
 		BaseErrorMessageID,
 		"The upstream service or managed device is unavailable or unreachable.",
-		"Critical",
+		TaskStatusCritical,
 		"Verify network connectivity to the managed device and ensure the device is powered on and accessible.",
 		nil)
 }
@@ -253,7 +238,7 @@ func ServiceTemporarilyUnavailableError(c *gin.Context) {
 	redfishErrorResponse(c, http.StatusServiceUnavailable,
 		BaseErrorMessageID,
 		"The service is temporarily unavailable due to overloading or maintenance. Please retry the request after some time.",
-		"Critical",
+		TaskStatusCritical,
 		"Wait for the specified retry period and resubmit the request.",
 		nil)
 }
